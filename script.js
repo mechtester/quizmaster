@@ -53,22 +53,46 @@ function generateSampleQAData() {
 
 function generateSampleMCQData() {
     const data = [
-        {
-            question: "Which planet is known as the Red Planet?",
-            option1: "Earth",
-            option2: "Mars",
-            option3: "Venus",
-            option4: "Jupiter",
-            correct: "Mars"
-        },
-        {
-            question: "What is the chemical symbol for gold?",
-            option1: "Au",
-            option2: "Ag",
-            option3: "Fe",
-            option4: "Cu",
-            correct: "Au"
-        }
+{
+        "question": "Which protocol is used to secure websites with encryption?",
+        "option1": "HTTP",
+        "option2": "FTP",
+        "option3": "HTTPS",
+        "option4": "SMTP",
+        "correct": "HTTPS"
+    },
+    {
+        "question": "What does TLS stand for in web security?",
+        "option1": "Transport Layer Security",
+        "option2": "Total Lock System",
+        "option3": "Transfer Load Security",
+        "option4": "Trusted Link Service",
+        "correct": "Transport Layer Security"
+    },
+    {
+        "question": "Which cloud computing model provides virtual machines and networking resources?",
+        "option1": "SaaS",
+        "option2": "PaaS",
+        "option3": "IaaS",
+        "option4": "DaaS",
+        "correct": "IaaS"
+    },
+    {
+        "question": "Which HTTP header is used to prevent cross-site scripting (XSS)?",
+        "option1": "X-Frame-Options",
+        "option2": "Content-Security-Policy",
+        "option3": "Referrer-Policy",
+        "option4": "Strict-Transport-Security",
+        "correct": "Content-Security-Policy"
+    },
+    {
+        "question": "What is the purpose of multi-factor authentication (MFA)?",
+        "option1": "To add an extra layer of security",
+        "option2": "To replace strong passwords",
+        "option3": "To encrypt network traffic",
+        "option4": "To prevent malware attacks",
+        "correct": "To add an extra layer of security"
+    }
     ];
     return data;
 }

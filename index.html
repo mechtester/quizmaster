@@ -3,358 +3,154 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Random Questions App</title>
-    <style>
-        .container {
-            max-width: 800px;
-            margin: 20px auto;
-            padding: 20px;
-            font-family: Arial, sans-serif;
-        }
-        .hidden {
-            display: none;
-        }
-        .question-card {
-            border: 1px solid #ccc;
-            padding: 20px;
-            margin: 20px 0;
-            border-radius: 5px;
-        }
-        .correct {
-            color: green;
-        }
-        .incorrect {
-            color: red;
-        }
-        button {
-            padding: 10px 20px;
-            margin: 5px;
-        }
-    </style>
+    <title>Quiz Master</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
 </head>
 <body>
     <div class="container">
-        <!-- Home Screen -->
-        <div id="homeScreen">
-            <h2>Random Questions Web App</h2>
-            <button onclick="showSection('qaSection')">Question & Answer Type</button>
-            <button onclick="showSection('mcqSection')">Multiple Choice Question Type</button>
-            <button onclick="clearIndexedDB()">Reset</button>
-        </div>
+        <header>
+            <h1>Quiz Master</h1>
+        </header>
 
-        <!-- Q&A Section -->
-        <div id="qaSection" class="hidden">
-            <h3>Questions & Answers</h3>
-            <input type="file" id="qaFile" accept=".csv" onchange="handleQAFile(event)">
-            <div id="qaQuestions" class="hidden">
-                <div class="question-card">
-                    <p id="qaQuestion"></p>
-                    <button onclick="showQAAnswer()">Show Answer</button>
-                    <p id="qaAnswer" class="hidden"></p>
-                    <button onclick="previousQAQuestion()">Previous Question</button>
-                    <button onclick="nextQAQuestion()">Next Question</button>
+        <!-- Home Screen
+        <div id="homeScreen" class="screen">
+            <div class="card">
+                <h2>Choose Quiz Type</h2>
+                <div class="button-group">
+                    <button onclick="showSection('qaSection')" class="btn btn-primary">
+                        <i class="icon">❓</i> Q&A Quiz
+                    </button>
+                    <button onclick="showSection('mcqSection')" class="btn btn-primary">
+                        <i class="icon">📝</i> Multiple Choice Quiz
+                    </button>
+                    <button onclick="clearIndexedDB()" class="btn btn-danger">
+                        <i class="icon">🔄</i> Reset All
+                    </button>
                 </div>
             </div>
-            <button onclick="showSection('homeScreen')">Home</button>
+        </div> -->
+
+
+        <!-- Home Screen -->
+<div id="homeScreen" class="screen">
+    <div class="card">
+        <h2>Quiz Master</h2>
+        <div class="about-section">
+            <h3>About the Application</h3>
+            <p>Quiz Master is an interactive quiz application that supports two types of quizzes:</p>
+            <ul>
+                <li><strong>Q&A Quiz</strong>: Test your knowledge with question and answer format</li>
+                <li><strong>Multiple Choice Quiz</strong>: Challenge yourself with multiple-choice questions</li>
+            </ul>
+        </div>
+
+        <div class="file-info">
+            <h3>File Requirements</h3>
+            <div class="file-type-support">
+                <h4>Supported File Types</h4>
+                <p>Upload CSV files with the following specifications:</p>
+                
+                <div class="file-type-details">
+                    <h5>Q&A Quiz CSV Header</h5>
+                    <pre>question,answer</pre>
+                    <p>Example:</p>
+                    <pre>
+What is the capital of France?,Paris
+Who painted the Mona Lisa?,Leonardo da Vinci</pre>
+                </div>
+                
+                <div class="file-type-details">
+                    <h5>Multiple Choice Quiz CSV Header</h5>
+                    <pre>question,option1,option2,option3,option4,correct</pre>
+                    <p>Example:</p>
+                    <pre>
+Which planet is known as the Red Planet?,Earth,Mars,Venus,Jupiter,Mars</pre>
+                </div>
+            </div>
+        </div>
+
+        <div class="button-group">
+            <button onclick="showSection('qaSection')" class="btn btn-primary">
+                <i class="icon">❓</i> Q&A Quiz
+            </button>
+            <button onclick="showSection('mcqSection')" class="btn btn-primary">
+                <i class="icon">📝</i> Multiple Choice Quiz
+            </button>
+            <button onclick="clearIndexedDB()" class="btn btn-danger">
+                <i class="icon">🔄</i> Reset All
+            </button>
+        </div>
+    </div>
+</div>
+
+
+
+
+        <!-- Q&A Section -->
+        <div id="qaSection" class="screen hidden">
+            <div class="card">
+                <div class="quiz-header">
+                    <h3>Questions & Answers</h3>
+                    <div class="quiz-info">
+                        <span>Total Questions: <span id="qaTotalQuestions">0</span></span>
+                        <span>Remaining: <span id="qaRemainingQuestions">0</span></span>
+                    </div>
+                </div>
+                <input type="file" id="qaFile" accept=".csv" onchange="handleQAFile(event)" class="file-input">
+                <div id="qaQuestions" class="hidden">
+                    <div class="question-card">
+                        <p id="qaQuestion" class="question"></p>
+                        <div class="answer-section">
+                            <button onclick="showQAAnswer()" class="btn btn-secondary">Show Answer</button>
+                            <p id="qaAnswer" class="hidden answer"></p>
+                        </div>
+                        <div class="navigation-buttons">
+                            <button onclick="previousQAQuestion()" class="btn btn-outline">Previous</button>
+                            <button onclick="nextQAQuestion()" class="btn btn-outline">Next</button>
+                        </div>
+                    </div>
+                </div>
+                <button onclick="showSection('homeScreen')" class="btn btn-danger">Back to Home</button>
+            </div>
         </div>
 
         <!-- MCQ Section -->
-        <div id="mcqSection" class="hidden">
-            <h3>Multiple Choice Questions</h3>
-            <input type="file" id="mcqFile" accept=".csv" onchange="handleMCQFile(event)">
-            <div id="mcqQuestions" class="hidden">
-                <div class="question-card">
-                    <p id="mcqQuestion"></p>
-                    <div id="mcqOptions"></div>
-                    <p id="mcqFeedback" class="hidden"></p>
-                    <button onclick="previousMCQQuestion()" class="hidden" id="prevMcqBtn">Previous Question</button>
-                    <button onclick="nextMCQQuestion()" class="hidden" id="nextMcqBtn">Next Question</button>
+        <div id="mcqSection" class="screen hidden">
+            <div class="card">
+                <div class="quiz-header">
+                    <h3>Multiple Choice Questions</h3>
+                    <div class="quiz-info">
+                        <span>Total Questions: <span id="mcqTotalQuestions">0</span></span>
+                        <span>Remaining: <span id="mcqRemainingQuestions">0</span></span>
+                    </div>
                 </div>
-                <p>Correct: <span id="mcqCorrect">0</span> Wrong: <span id="mcqWrong">0</span></p>
+                <input type="file" id="mcqFile" accept=".csv" onchange="handleMCQFile(event)" class="file-input">
+                <div id="mcqQuestions" class="hidden">
+                    <div class="question-card">
+                        <p id="mcqQuestion" class="question"></p>
+                        <div id="mcqOptions" class="options-grid"></div>
+                        <p id="mcqFeedback" class="hidden"></p>
+                        <div class="navigation-buttons">
+                            <button onclick="previousMCQQuestion()" class="hidden btn btn-outline" id="prevMcqBtn">Previous</button>
+                            <button onclick="nextMCQQuestion()" class="hidden btn btn-outline" id="nextMcqBtn">Next</button>
+                        </div>
+                    </div>
+                    <div class="score-summary">
+                        <span>Correct: <span id="mcqCorrect" class="correct">0</span></span>
+                        <span>Wrong: <span id="mcqWrong" class="incorrect">0</span></span>
+                    </div>
+                </div>
+                <button onclick="showSection('homeScreen')" class="btn btn-danger">Back to Home</button>
             </div>
-            <button onclick="showSection('homeScreen')">Home</button>
         </div>
     </div>
 
-    <script>
-        let qaQuestions = [];
-        let mcqQuestions = [];
-        let currentQAIndex = 0;
-        let currentMCQIndex = 0;
-        let qaScore = 0;
-        let mcqCorrect = 0;
-        let mcqWrong = 0;
-        let db;
+    <script src="script.js"></script>
 
-        // Initialize IndexedDB
-        const request = indexedDB.open('quizDB', 1);
+    
 
-        request.onupgradeneeded = function(event) {
-            db = event.target.result;
-            if (!db.objectStoreNames.contains('qaQuestions')) {
-                db.createObjectStore('qaQuestions', { keyPath: 'id', autoIncrement: true });
-            }
-            if (!db.objectStoreNames.contains('mcqQuestions')) {
-                db.createObjectStore('mcqQuestions', { keyPath: 'id', autoIncrement: true });
-            }
-        };
 
-        request.onsuccess = function(event) {
-            db = event.target.result;
-        };
 
-        request.onerror = function(event) {
-            console.error('Database error: ' + event.target.errorCode);
-        };
-
-        function showSection(sectionId) {
-            document.getElementById('homeScreen').classList.add('hidden');
-            document.getElementById('qaSection').classList.add('hidden');
-            document.getElementById('mcqSection').classList.add('hidden');
-            document.getElementById(sectionId).classList.remove('hidden');
-        }
-
-        function handleQAFile(event) {
-            const file = event.target.files[0];
-            const reader = new FileReader();
-            
-            reader.onload = function(e) {
-                const text = e.target.result;
-                const rows = text.split('\n').slice(1); // Skip header row
-                const questions = rows.map(row => {
-                    const [question, answer] = row.split(',').map(cell => cell.trim());
-                    return { question, answer };
-                }).filter(q => q.question && q.answer);
-                
-                // Store in IndexedDB
-                const transaction = db.transaction(['qaQuestions'], 'readwrite');
-                const store = transaction.objectStore('qaQuestions');
-                questions.forEach(q => store.add(q));
-                
-                transaction.oncomplete = function() {
-                    retrieveQAQuestions();
-                };
-            };
-            
-            reader.readAsText(file);
-        }
-
-        function handleMCQFile(event) {
-            const file = event.target.files[0];
-            const reader = new FileReader();
-            
-            reader.onload = function(e) {
-                const text = e.target.result;
-                const rows = text.split('\n').slice(1); // Skip header row
-                const questions = rows.map(row => {
-                    const [question, opt1, opt2, opt3, opt4, correct] = row.split(',').map(cell => cell.trim());
-                    return {
-                        question,
-                        options: [opt1, opt2, opt3, opt4],
-                        correct
-                    };
-                }).filter(q => q.question && q.options.length === 4 && q.correct);
-                
-                // Store in IndexedDB
-                const transaction = db.transaction(['mcqQuestions'], 'readwrite');
-                const store = transaction.objectStore('mcqQuestions');
-                questions.forEach(q => store.add(q));
-                
-                transaction.oncomplete = function() {
-                    retrieveMCQQuestions();
-                };
-            };
-            
-            reader.readAsText(file);
-        }
-
-        function retrieveQAQuestions() {
-            const transaction = db.transaction(['qaQuestions'], 'readonly');
-            const store = transaction.objectStore('qaQuestions');
-            const request = store.getAll();
-            
-            request.onsuccess = function(event) {
-                qaQuestions = shuffleArray(event.target.result);
-                if (qaQuestions.length > 0) {
-                    document.getElementById('qaQuestions').classList.remove('hidden');
-                    showQAQuestion();
-                }
-            };
-            
-            request.onerror = function(event) {
-                console.error('Error retrieving QA questions: ' + event.target.errorCode);
-            };
-        }
-
-        function retrieveMCQQuestions() {
-            const transaction = db.transaction(['mcqQuestions'], 'readonly');
-            const store = transaction.objectStore('mcqQuestions');
-            const request = store.getAll();
-            
-            request.onsuccess = function(event) {
-                mcqQuestions = shuffleArray(event.target.result);
-                if (mcqQuestions.length > 0) {
-                    document.getElementById('mcqQuestions').classList.remove('hidden');
-                    showMCQQuestion();
-                }
-            };
-            
-            request.onerror = function(event) {
-                console.error('Error retrieving MCQ questions: ' + event.target.errorCode);
-            };
-        }
-
-        function showQAQuestion() {
-            const question = qaQuestions[currentQAIndex];
-            document.getElementById('qaQuestion').textContent = question.question;
-            document.getElementById('qaAnswer').classList.add('hidden');
-            document.getElementById('qaAnswer').textContent = '';
-        }
-
-        function showQAAnswer() {
-            const answer = qaQuestions[currentQAIndex].answer;
-            document.getElementById('qaAnswer').textContent = answer;
-            document.getElementById('qaAnswer').classList.remove('hidden');
-        }
-
-        function showMCQQuestion() {
-            const question = mcqQuestions[currentMCQIndex];
-            document.getElementById('mcqQuestion').textContent = question.question;
-            
-            const optionsHtml = question.options.map((option, index) => `
-                <div>
-                    <input type="radio" name="mcq" value="${option}" id="opt${index}">
-                    <label for="opt${index}">${option}</label>
-                </div>
-            `).join('');
-            
-            document.getElementById('mcqOptions').innerHTML = optionsHtml;
-            document.getElementById('mcqFeedback').classList.add('hidden');
-            document.getElementById('nextMcqBtn').classList.add('hidden');
-            document.getElementById('prevMcqBtn').classList.add('hidden');
-            
-            // Add click handlers to radio buttons
-            document.querySelectorAll('input[name="mcq"]').forEach(radio => {
-                radio.onclick = checkMCQAnswer;
-            });
-            
-            // Enable previous button if not on the first question
-            if (currentMCQIndex > 0) {
-                document.getElementById('prevMcqBtn').classList.remove('hidden');
-            }
-            
-            // Enable next button if not on the last question
-            if (currentMCQIndex < mcqQuestions.length - 1) {
-                document.getElementById('nextMcqBtn').classList.remove('hidden');
-            }
-        }
-
-        function checkMCQAnswer(e) {
-            const selectedAnswer = e.target.value;
-            const correctAnswer = mcqQuestions[currentMCQIndex].correct;
-            const feedback = document.getElementById('mcqFeedback');
-            
-            if (selectedAnswer === correctAnswer) {
-                feedback.textContent = "Correct!";
-                feedback.className = "correct";
-                mcqCorrect++;
-            } else {
-                feedback.textContent = `Incorrect. The correct answer is: ${correctAnswer}`;
-                feedback.className = "incorrect";
-                mcqWrong++;
-            }
-            
-            feedback.classList.remove('hidden');
-            document.getElementById('nextMcqBtn').classList.remove('hidden');
-            document.getElementById('prevMcqBtn').classList.remove('hidden');
-            document.getElementById('mcqCorrect').textContent = mcqCorrect;
-            document.getElementById('mcqWrong').textContent = mcqWrong;
-            
-            // Disable all radio buttons after answer is selected
-            document.querySelectorAll('input[name="mcq"]').forEach(radio => {
-                radio.disabled = true;
-            });
-        }
-
-        function nextQAQuestion() {
-            currentQAIndex++;
-            if (currentQAIndex < qaQuestions.length) {
-                showQAQuestion();
-            } else {
-                document.getElementById('qaQuestions').innerHTML = `
-                    <h3>Quiz Complete!</h3>
-                    <p>Final Score: ${qaScore}/${qaQuestions.length}</p>
-                    <button onclick="location.reload()">Start Over</button>
-                `;
-            }
-        }
-
-        function previousQAQuestion() {
-            currentQAIndex--;
-            if (currentQAIndex >= 0) {
-                showQAQuestion();
-            } else {
-                currentQAIndex = 0; // Ensure index doesn't go below 0
-            }
-        }
-
-        function nextMCQQuestion() {
-            currentMCQIndex++;
-            if (currentMCQIndex < mcqQuestions.length) {
-                showMCQQuestion();
-            } else {
-                document.getElementById('mcqQuestions').innerHTML = `
-                    <h3>Quiz Complete!</h3>
-                    <p>Correct Answers: ${mcqCorrect}</p>
-                    <p>Wrong Answers: ${mcqWrong}</p>
-                    <p>Score: ${((mcqCorrect / mcqQuestions.length) * 100).toFixed(1)}%</p>
-                    <button onclick="location.reload()">Start Over</button>
-                `;
-            }
-        }
-
-        function previousMCQQuestion() {
-            currentMCQIndex--;
-            if (currentMCQIndex >= 0) {
-                showMCQQuestion();
-            } else {
-                currentMCQIndex = 0; // Ensure index doesn't go below 0
-            }
-        }
-
-        function shuffleArray(array) {
-            for (let i = array.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [array[i], array[j]] = [array[j], array[i]];
-            }
-            return array;
-        }
-
-        function clearIndexedDB() {
-            const transaction = db.transaction(['qaQuestions', 'mcqQuestions'], 'readwrite');
-            const qaStore = transaction.objectStore('qaQuestions');
-            const mcqStore = transaction.objectStore('mcqQuestions');
-            
-            qaStore.clear();
-            mcqStore.clear();
-            
-            transaction.oncomplete = function() {
-                qaQuestions = [];
-                mcqQuestions = [];
-                currentQAIndex = 0;
-                currentMCQIndex = 0;
-                qaScore = 0;
-                mcqCorrect = 0;
-                mcqWrong = 0;
-                document.getElementById('qaQuestions').classList.add('hidden');
-                document.getElementById('mcqQuestions').classList.add('hidden');
-                showSection('homeScreen');
-            };
-            
-            transaction.onerror = function(event) {
-                console.error('Error clearing IndexedDB: ' + event.target.errorCode);
-            };
-        }
-    </script>
 </body>
 </html>

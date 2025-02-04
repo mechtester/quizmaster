@@ -37,9 +37,16 @@ function loadExistingQuestions() {
 // Sample data generation for downloads
 function generateSampleQAData() {
     const data = [
-        { question: "What is the capital of France?", answer: "Paris" },
-        { question: "Who painted the Mona Lisa?", answer: "Leonardo da Vinci" },
-        { question: "What is the largest planet in our solar system?", answer: "Jupiter" }
+    { "question": "What does HTTPS stand for?", "answer": "HyperText Transfer Protocol Secure" },
+    { "question": "Which encryption protocol is commonly used in HTTPS?", "answer": "TLS (Transport Layer Security)" },
+    { "question": "What is the purpose of a Content Security Policy (CSP) in web security?", "answer": "To prevent cross-site scripting (XSS) and data injection attacks by restricting resource loading." },
+    { "question": "What is the principle of 'least privilege' in cloud security?", "answer": "Users and services should only have the minimum level of access required to perform their tasks." },
+    { "question": "What does IAM stand for in cloud computing?", "answer": "Identity and Access Management" },
+    { "question": "What is the difference between symmetric and asymmetric encryption?", "answer": "Symmetric encryption uses a single key for encryption and decryption, while asymmetric encryption uses a public-private key pair." },
+    { "question": "What is a Zero Trust security model?", "answer": "A security framework that assumes no entity inside or outside the network is trusted by default." },
+    { "question": "What is the Same-Origin Policy (SOP) in web security?", "answer": "A browser security feature that prevents scripts from accessing data from a different domain." },
+    { "question": "What is a Man-in-the-Middle (MitM) attack?", "answer": "An attack where an attacker intercepts and potentially alters communication between two parties." },
+    { "question": "What is the role of a Web Application Firewall (WAF)?", "answer": "To protect web applications by filtering and monitoring HTTP traffic for malicious activity." }
     ];
     return data;
 }

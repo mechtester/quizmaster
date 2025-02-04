@@ -96,4 +96,4 @@ Download sample templates directly from the application:
 - Data is stored locally in the browser
 - Requires JavaScript to be enabled
 
-For any issues or feature requests, please contact the development team.
+For any issues or feature requests, please update in github issues 

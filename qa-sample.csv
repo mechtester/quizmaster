@@ -1,4 +1,4 @@
-Questions,Answers
+question,answer
 what is Selenium?,"Selenium is a suite of open-source tools for automating web browsers. 
 
 It allows you to write automated tests for web applications in various programming languages, including Java, Python, and C#."

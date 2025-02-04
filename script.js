@@ -22,71 +22,190 @@ request.onupgradeneeded = function(event) {
 
 request.onsuccess = function(event) {
     db = event.target.result;
+    loadExistingQuestions();
 };
 
 request.onerror = function(event) {
     console.error('Database error: ' + event.target.errorCode);
 };
 
+function loadExistingQuestions() {
+    retrieveQAQuestions();
+    retrieveMCQQuestions();
+}
+
+// Sample data generation for downloads
+function generateSampleQAData() {
+    const data = [
+        { question: "What is the capital of France?", answer: "Paris" },
+        { question: "Who painted the Mona Lisa?", answer: "Leonardo da Vinci" },
+        { question: "What is the largest planet in our solar system?", answer: "Jupiter" }
+    ];
+    return data;
+}
+
+function generateSampleMCQData() {
+    const data = [
+        {
+            question: "Which planet is known as the Red Planet?",
+            option1: "Earth",
+            option2: "Mars",
+            option3: "Venus",
+            option4: "Jupiter",
+            correct: "Mars"
+        },
+        {
+            question: "What is the chemical symbol for gold?",
+            option1: "Au",
+            option2: "Ag",
+            option3: "Fe",
+            option4: "Cu",
+            correct: "Au"
+        }
+    ];
+    return data;
+}
+
+// Download sample files
+function downloadSampleQA() {
+    const data = generateSampleQAData();
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Q&A Questions");
+    XLSX.writeFile(wb, "sample_qa_questions.xlsx");
+}
+
+function downloadSampleMCQ() {
+    const data = generateSampleMCQData();
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "MCQ Questions");
+    XLSX.writeFile(wb, "sample_mcq_questions.xlsx");
+}
+
+function handleQAFile(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    
+    reader.onload = function(e) {
+        try {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, { type: 'array' });
+            
+            // Get first sheet
+            const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+            // Convert to JSON
+            const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+            
+            if (jsonData.length === 0) {
+                alert("No data found in the Excel file!");
+                return;
+            }
+
+            const questions = jsonData.map(row => ({
+                question: row.question?.trim(),
+                answer: row.answer?.trim()
+            })).filter(q => q.question && q.answer);
+
+            if (questions.length === 0) {
+                alert("No valid questions found. Please check the file format!");
+                return;
+            }
+            
+            // Store in IndexedDB
+            const transaction = db.transaction(['qaQuestions'], 'readwrite');
+            const store = transaction.objectStore('qaQuestions');
+            questions.forEach(q => store.add(q));
+            
+            transaction.oncomplete = function() {
+                retrieveQAQuestions();
+            };
+        } catch (error) {
+            console.error('Error processing file:', error);
+            alert("Error processing the Excel file. Please check the format.");
+        }
+    };
+    
+    reader.readAsArrayBuffer(file);
+}
+
+// Modified handleMCQFile function
+function handleMCQFile(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    
+    reader.onload = function(e) {
+        try {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, { type: 'array' });
+            
+            // Get first sheet
+            const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+            // Convert to JSON
+            const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+            
+            if (jsonData.length === 0) {
+                alert("No data found in the Excel file!");
+                return;
+            }
+
+            // Validate the structure of each question
+            const questions = [];
+            for (let row of jsonData) {
+                // Check if all required fields exist and are not empty
+                if (!row.question || !row.option1 || !row.option2 || !row.option3 || 
+                    !row.option4 || !row.correct) {
+                    continue;
+                }
+
+                const question = {
+                    question: row.question.trim(),
+                    options: [
+                        row.option1.trim(),
+                        row.option2.trim(),
+                        row.option3.trim(),
+                        row.option4.trim()
+                    ],
+                    correct: row.correct.trim()
+                };
+
+                // Verify that the correct answer is one of the options
+                if (question.options.includes(question.correct)) {
+                    questions.push(question);
+                }
+            }
+
+            if (questions.length === 0) {
+                alert("No valid questions found. Please ensure your Excel file has the following columns:\nquestion, option1, option2, option3, option4, correct");
+                return;
+            }
+            
+            // Store in IndexedDB
+            const transaction = db.transaction(['mcqQuestions'], 'readwrite');
+            const store = transaction.objectStore('mcqQuestions');
+            questions.forEach(q => store.add(q));
+            
+            transaction.oncomplete = function() {
+                retrieveMCQQuestions();
+            };
+        } catch (error) {
+            console.error('Error processing file:', error);
+            alert("Error processing the Excel file. Please ensure your file follows the required format:\n- First row should contain headers\n- Required columns: question, option1, option2, option3, option4, correct");
+        }
+    };
+    
+    reader.readAsArrayBuffer(file);
+}
+
 function showSection(sectionId) {
     document.getElementById('homeScreen').classList.add('hidden');
     document.getElementById('qaSection').classList.add('hidden');
     document.getElementById('mcqSection').classList.add('hidden');
     document.getElementById(sectionId).classList.remove('hidden');
-}
-
-function handleQAFile(event) {
-    const file = event.target.files[0];
-    const reader = new FileReader();
-    
-    reader.onload = function(e) {
-        const text = e.target.result;
-        const rows = text.split('\n').slice(1); // Skip header row
-        const questions = rows.map(row => {
-            const [question, answer] = row.split(',').map(cell => cell.trim());
-            return { question, answer };
-        }).filter(q => q.question && q.answer);
-        
-        // Store in IndexedDB
-        const transaction = db.transaction(['qaQuestions'], 'readwrite');
-        const store = transaction.objectStore('qaQuestions');
-        questions.forEach(q => store.add(q));
-        
-        transaction.oncomplete = function() {
-            retrieveQAQuestions();
-        };
-    };
-    
-    reader.readAsText(file);
-}
-
-function handleMCQFile(event) {
-    const file = event.target.files[0];
-    const reader = new FileReader();
-    
-    reader.onload = function(e) {
-        const text = e.target.result;
-        const rows = text.split('\n').slice(1); // Skip header row
-        const questions = rows.map(row => {
-            const [question, opt1, opt2, opt3, opt4, correct] = row.split(',').map(cell => cell.trim());
-            return {
-                question,
-                options: [opt1, opt2, opt3, opt4],
-                correct
-            };
-        }).filter(q => q.question && q.options.length === 4 && q.correct);
-        
-        // Store in IndexedDB
-        const transaction = db.transaction(['mcqQuestions'], 'readwrite');
-        const store = transaction.objectStore('mcqQuestions');
-        questions.forEach(q => store.add(q));
-        
-        transaction.oncomplete = function() {
-            retrieveMCQQuestions();
-        };
-    };
-    
-    reader.readAsText(file);
 }
 
 function retrieveQAQuestions() {
@@ -97,13 +216,11 @@ function retrieveQAQuestions() {
     request.onsuccess = function(event) {
         qaQuestions = shuffleArray(event.target.result);
         if (qaQuestions.length > 0) {
+            document.getElementById('qaTotalQuestions').textContent = qaQuestions.length;
+            document.getElementById('qaRemainingQuestions').textContent = qaQuestions.length;
             document.getElementById('qaQuestions').classList.remove('hidden');
             showQAQuestion();
         }
-    };
-    
-    request.onerror = function(event) {
-        console.error('Error retrieving QA questions: ' + event.target.errorCode);
     };
 }
 
@@ -115,13 +232,11 @@ function retrieveMCQQuestions() {
     request.onsuccess = function(event) {
         mcqQuestions = shuffleArray(event.target.result);
         if (mcqQuestions.length > 0) {
+            document.getElementById('mcqTotalQuestions').textContent = mcqQuestions.length;
+            document.getElementById('mcqRemainingQuestions').textContent = mcqQuestions.length;
             document.getElementById('mcqQuestions').classList.remove('hidden');
             showMCQQuestion();
         }
-    };
-    
-    request.onerror = function(event) {
-        console.error('Error retrieving MCQ questions: ' + event.target.errorCode);
     };
 }
 
@@ -130,6 +245,7 @@ function showQAQuestion() {
     document.getElementById('qaQuestion').textContent = question.question;
     document.getElementById('qaAnswer').classList.add('hidden');
     document.getElementById('qaAnswer').textContent = '';
+    document.getElementById('qaRemainingQuestions').textContent = qaQuestions.length - currentQAIndex;
 }
 
 function showQAAnswer() {
@@ -137,6 +253,8 @@ function showQAAnswer() {
     document.getElementById('qaAnswer').textContent = answer;
     document.getElementById('qaAnswer').classList.remove('hidden');
 }
+
+// ... (keep all the previous code up to showMCQQuestion) ...
 
 function showMCQQuestion() {
     const question = mcqQuestions[currentMCQIndex];
@@ -151,23 +269,18 @@ function showMCQQuestion() {
     
     document.getElementById('mcqOptions').innerHTML = optionsHtml;
     document.getElementById('mcqFeedback').classList.add('hidden');
-    document.getElementById('nextMcqBtn').classList.add('hidden');
-    document.getElementById('prevMcqBtn').classList.add('hidden');
+    
+    // Update navigation buttons
+    document.getElementById('prevMcqBtn').classList.toggle('hidden', currentMCQIndex === 0);
+    document.getElementById('nextMcqBtn').classList.toggle('hidden', currentMCQIndex >= mcqQuestions.length - 1);
+    
+    // Update remaining questions
+    document.getElementById('mcqRemainingQuestions').textContent = mcqQuestions.length - currentMCQIndex;
     
     // Add click handlers to radio buttons
     document.querySelectorAll('input[name="mcq"]').forEach(radio => {
         radio.onclick = checkMCQAnswer;
     });
-    
-    // Enable previous button if not on the first question
-    if (currentMCQIndex > 0) {
-        document.getElementById('prevMcqBtn').classList.remove('hidden');
-    }
-    
-    // Enable next button if not on the last question
-    if (currentMCQIndex < mcqQuestions.length - 1) {
-        document.getElementById('nextMcqBtn').classList.remove('hidden');
-    }
 }
 
 function checkMCQAnswer(e) {
@@ -186,8 +299,6 @@ function checkMCQAnswer(e) {
     }
     
     feedback.classList.remove('hidden');
-    document.getElementById('nextMcqBtn').classList.remove('hidden');
-    document.getElementById('prevMcqBtn').classList.remove('hidden');
     document.getElementById('mcqCorrect').textContent = mcqCorrect;
     document.getElementById('mcqWrong').textContent = mcqWrong;
     
@@ -198,49 +309,118 @@ function checkMCQAnswer(e) {
 }
 
 function nextQAQuestion() {
-    currentQAIndex++;
-    if (currentQAIndex < qaQuestions.length) {
+    if (currentQAIndex < qaQuestions.length - 1) {
+        currentQAIndex++;
         showQAQuestion();
     } else {
         document.getElementById('qaQuestions').innerHTML = `
-            <h3>Quiz Complete!</h3>
-            <p>Final Score: ${qaScore}/${qaQuestions.length}</p>
-            <button onclick="location.reload()">Start Over</button>
+            <div class="question-card">
+                <h3>Quiz Complete!</h3>
+                <p>You've completed all questions!</p>
+                <button onclick="restartQAQuiz()" class="btn btn-primary">Start Over</button>
+            </div>
         `;
     }
 }
 
 function previousQAQuestion() {
-    currentQAIndex--;
-    if (currentQAIndex >= 0) {
+    if (currentQAIndex > 0) {
+        currentQAIndex--;
         showQAQuestion();
-    } else {
-        currentQAIndex = 0; // Ensure index doesn't go below 0
     }
 }
 
 function nextMCQQuestion() {
-    currentMCQIndex++;
-    if (currentMCQIndex < mcqQuestions.length) {
+    if (currentMCQIndex < mcqQuestions.length - 1) {
+        currentMCQIndex++;
         showMCQQuestion();
     } else {
+        const percentage = ((mcqCorrect / mcqQuestions.length) * 100).toFixed(1);
         document.getElementById('mcqQuestions').innerHTML = `
-            <h3>Quiz Complete!</h3>
-            <p>Correct Answers: ${mcqCorrect}</p>
-            <p>Wrong Answers: ${mcqWrong}</p>
-            <p>Score: ${((mcqCorrect / mcqQuestions.length) * 100).toFixed(1)}%</p>
-            <button onclick="location.reload()">Start Over</button>
+            <div class="question-card">
+                <h3>Quiz Complete!</h3>
+                <p>Correct Answers: ${mcqCorrect}</p>
+                <p>Wrong Answers: ${mcqWrong}</p>
+                <p>Score: ${percentage}%</p>
+                <button onclick="restartMCQQuiz()" class="btn btn-primary">Start Over</button>
+            </div>
         `;
     }
 }
 
 function previousMCQQuestion() {
-    currentMCQIndex--;
-    if (currentMCQIndex >= 0) {
+    if (currentMCQIndex > 0) {
+        currentMCQIndex--;
         showMCQQuestion();
-    } else {
-        currentMCQIndex = 0; // Ensure index doesn't go below 0
     }
+}
+
+// Modified restartQAQuiz function
+function restartQAQuiz() {
+    currentQAIndex = 0;
+    qaScore = 0;
+    qaQuestions = shuffleArray(qaQuestions);
+
+
+    // Reset the UI elements
+    const questionsDiv = document.getElementById('qaQuestions');
+    questionsDiv.innerHTML = `
+        <div class="question-card">
+            <p id="qaQuestion" class="question"></p>
+            <div class="answer-section">
+                <button onclick="showQAAnswer()" class="btn btn-secondary">Show Answer</button>
+                <p id="qaAnswer" class="hidden answer"></p>
+            </div>
+            <div class="navigation-buttons">
+                <button onclick="previousQAQuestion()" class="btn btn-outline">Previous</button>
+                <button onclick="nextQAQuestion()" class="btn btn-outline">Next</button>
+            </div>
+        </div>
+    `;
+
+    // Update counters and show first question
+    document.getElementById('qaTotalQuestions').textContent = qaQuestions.length;
+    document.getElementById('qaRemainingQuestions').textContent = qaQuestions.length;
+    questionsDiv.classList.remove('hidden');
+    showQAQuestion();
+}
+
+
+// Modified restartMCQQuiz function
+function restartMCQQuiz() {
+    currentMCQIndex = 0;
+    mcqCorrect = 0;
+    mcqWrong = 0;
+    mcqQuestions = shuffleArray(mcqQuestions);
+    
+    // Reset the UI elements
+    const questionsDiv = document.getElementById('mcqQuestions');
+    questionsDiv.innerHTML = `
+        <div class="question-card">
+            <p id="mcqQuestion" class="question"></p>
+            <div id="mcqOptions" class="options-grid"></div>
+            <p id="mcqFeedback" class="hidden"></p>
+            <div class="navigation-buttons">
+                <button onclick="previousMCQQuestion()" class="btn btn-outline" id="prevMcqBtn">Previous</button>
+                <button onclick="nextMCQQuestion()" class="btn btn-outline" id="nextMcqBtn">Next</button>
+            </div>
+        </div>
+        <div class="score-summary">
+            <span>Correct: <span id="mcqCorrect" class="correct">0</span></span>
+            <span>Wrong: <span id="mcqWrong" class="incorrect">0</span></span>
+        </div>
+    `;
+    
+    // Update counters and show first question
+    document.getElementById('mcqTotalQuestions').textContent = mcqQuestions.length;
+    document.getElementById('mcqRemainingQuestions').textContent = mcqQuestions.length;
+    questionsDiv.classList.remove('hidden');
+    
+    // Reset score display
+    document.getElementById('mcqCorrect').textContent = '0';
+    document.getElementById('mcqWrong').textContent = '0';
+    
+    showMCQQuestion();
 }
 
 function shuffleArray(array) {
@@ -251,6 +431,7 @@ function shuffleArray(array) {
     return array;
 }
 
+// Modified clearIndexedDB function
 function clearIndexedDB() {
     const transaction = db.transaction(['qaQuestions', 'mcqQuestions'], 'readwrite');
     const qaStore = transaction.objectStore('qaQuestions');
@@ -260,6 +441,7 @@ function clearIndexedDB() {
     mcqStore.clear();
     
     transaction.oncomplete = function() {
+        // Clear all data arrays
         qaQuestions = [];
         mcqQuestions = [];
         currentQAIndex = 0;
@@ -267,108 +449,59 @@ function clearIndexedDB() {
         qaScore = 0;
         mcqCorrect = 0;
         mcqWrong = 0;
+        
+        // Reset UI elements
+        document.getElementById('qaTotalQuestions').textContent = '0';
+        document.getElementById('qaRemainingQuestions').textContent = '0';
+        document.getElementById('mcqTotalQuestions').textContent = '0';
+        document.getElementById('mcqRemainingQuestions').textContent = '0';
+        document.getElementById('mcqCorrect').textContent = '0';
+        document.getElementById('mcqWrong').textContent = '0';
+        
+        // Reset question containers to their initial state
+        document.getElementById('qaQuestions').innerHTML = `
+            <div class="question-card">
+                <p id="qaQuestion" class="question"></p>
+                <div class="answer-section">
+                    <button onclick="showQAAnswer()" class="btn btn-secondary">Show Answer</button>
+                    <p id="qaAnswer" class="hidden answer"></p>
+                </div>
+                <div class="navigation-buttons">
+                    <button onclick="previousQAQuestion()" class="btn btn-outline">Previous</button>
+                    <button onclick="nextQAQuestion()" class="btn btn-outline">Next</button>
+                </div>
+            </div>
+        `;
+        
+        document.getElementById('mcqQuestions').innerHTML = `
+            <div class="question-card">
+                <p id="mcqQuestion" class="question"></p>
+                <div id="mcqOptions" class="options-grid"></div>
+                <p id="mcqFeedback" class="hidden"></p>
+                <div class="navigation-buttons">
+                    <button onclick="previousMCQQuestion()" class="btn btn-outline" id="prevMcqBtn">Previous</button>
+                    <button onclick="nextMCQQuestion()" class="btn btn-outline" id="nextMcqBtn">Next</button>
+                </div>
+            </div>
+            <div class="score-summary">
+                <span>Correct: <span id="mcqCorrect" class="correct">0</span></span>
+                <span>Wrong: <span id="mcqWrong" class="incorrect">0</span></span>
+            </div>
+        `;
+        
+        // Hide question sections
         document.getElementById('qaQuestions').classList.add('hidden');
         document.getElementById('mcqQuestions').classList.add('hidden');
+        
+        // Clear file inputs
+        document.getElementById('qaFile').value = '';
+        document.getElementById('mcqFile').value = '';
+        
+        // Return to home screen
         showSection('homeScreen');
     };
-    
-    transaction.onerror = function(event) {
-        console.error('Error clearing IndexedDB: ' + event.target.errorCode);
-    };
 }
-
-
-function retrieveQAQuestions() {
-    const transaction = db.transaction(['qaQuestions'], 'readonly');
-    const store = transaction.objectStore('qaQuestions');
-    const request = store.getAll();
-    
-    request.onsuccess = function(event) {
-        qaQuestions = shuffleArray(event.target.result);
-        if (qaQuestions.length > 0) {
-            // Update total and remaining questions
-            document.getElementById('qaTotalQuestions').textContent = qaQuestions.length;
-            document.getElementById('qaRemainingQuestions').textContent = qaQuestions.length;
-            
-            document.getElementById('qaQuestions').classList.remove('hidden');
-            showQAQuestion();
-        }
-    };
-    
-    request.onerror = function(event) {
-        console.error('Error retrieving QA questions: ' + event.target.errorCode);
-    };
-}
-
-function retrieveMCQQuestions() {
-    const transaction = db.transaction(['mcqQuestions'], 'readonly');
-    const store = transaction.objectStore('mcqQuestions');
-    const request = store.getAll();
-    
-    request.onsuccess = function(event) {
-        mcqQuestions = shuffleArray(event.target.result);
-        if (mcqQuestions.length > 0) {
-            // Update total and remaining questions
-            document.getElementById('mcqTotalQuestions').textContent = mcqQuestions.length;
-            document.getElementById('mcqRemainingQuestions').textContent = mcqQuestions.length;
-            
-            document.getElementById('mcqQuestions').classList.remove('hidden');
-            showMCQQuestion();
-        }
-    };
-    
-    request.onerror = function(event) {
-        console.error('Error retrieving MCQ questions: ' + event.target.errorCode);
-    };
-}
-
-
-function nextQAQuestion() {
-    currentQAIndex++;
-    if (currentQAIndex < qaQuestions.length) {
-        showQAQuestion();
-        // Update remaining questions
-        document.getElementById('qaRemainingQuestions').textContent = qaQuestions.length - currentQAIndex;
-    } else {
-        document.getElementById('qaQuestions').innerHTML = `
-            <h3>Quiz Complete!</h3>
-            <p>Final Score: ${qaScore}/${qaQuestions.length}</p>
-            <button onclick="location.reload()">Start Over</button>
-        `;
-    }
-}
-
-function nextMCQQuestion() {
-    currentMCQIndex++;
-    if (currentMCQIndex < mcqQuestions.length) {
-        showMCQQuestion();
-        // Update remaining questions
-        document.getElementById('mcqRemainingQuestions').textContent = mcqQuestions.length - currentMCQIndex;
-    } else {
-        document.getElementById('mcqQuestions').innerHTML = `
-            <h3>Quiz Complete!</h3>
-            <p>Correct Answers: ${mcqCorrect}</p>
-            <p>Wrong Answers: ${mcqWrong}</p>
-            <p>Score: ${((mcqCorrect / mcqQuestions.length) * 100).toFixed(1)}%</p>
-            <button onclick="location.reload()">Start Over</button>
-        `;
-    }
-}
-
-function previousQAQuestion() {
-    if (currentQAIndex > 0) {
-        currentQAIndex--;
-        showQAQuestion();
-        // Update remaining questions
-        document.getElementById('qaRemainingQuestions').textContent = qaQuestions.length - currentQAIndex;
-    }
-}
-
-function previousMCQQuestion() {
-    if (currentMCQIndex > 0) {
-        currentMCQIndex--;
-        showMCQQuestion();
-        // Update remaining questions
-        document.getElementById('mcqRemainingQuestions').textContent = mcqQuestions.length - currentMCQIndex;
-    }
-}
+// Initialize by showing home screen
+document.addEventListener('DOMContentLoaded', function() {
+    showSection('homeScreen');
+});

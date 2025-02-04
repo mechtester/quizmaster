@@ -6,6 +6,8 @@
     <title>Quiz Master</title>
     <link rel="stylesheet" href="styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <!-- Add SheetJS library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
     <div class="container">
@@ -13,10 +15,45 @@
             <h1>Quiz Master</h1>
         </header>
 
-        <!-- Home Screen
+        <!-- Home Screen -->
         <div id="homeScreen" class="screen">
             <div class="card">
-                <h2>Choose Quiz Type</h2>
+                <h2>Quiz Master</h2>
+                <div class="about-section">
+                    <h3>About the Application</h3>
+                    <p>Quiz Master is an interactive quiz application that supports two types of quizzes:</p>
+                    <ul>
+                        <li><strong>Q&A Quiz</strong>: Test your knowledge with question and answer format</li>
+                        <li><strong>Multiple Choice Quiz</strong>: Challenge yourself with multiple-choice questions</li>
+                    </ul>
+                </div>
+
+                <div class="file-info">
+                    <h3>File Requirements</h3>
+                    <div class="file-type-support">
+                        <h4>Supported File Types</h4>
+                        <p>Download sample files or upload your Excel files (.xlsx):</p>
+                        
+                        <div class="file-type-details">
+                            <h5>Q&A Quiz Excel Format</h5>
+                            <p>First row should contain headers:</p>
+                            <pre>question | answer</pre>
+                            <button onclick="downloadSampleQA()" class="btn btn-secondary">
+                                <i class="icon">📥</i> Download Sample Q&A
+                            </button>
+                        </div>
+                        
+                        <div class="file-type-details">
+                            <h5>Multiple Choice Quiz Excel Format</h5>
+                            <p>First row should contain headers:</p>
+                            <pre>question | option1 | option2 | option3 | option4 | correct</pre>
+                            <button onclick="downloadSampleMCQ()" class="btn btn-secondary">
+                                <i class="icon">📥</i> Download Sample MCQ
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="button-group">
                     <button onclick="showSection('qaSection')" class="btn btn-primary">
                         <i class="icon">❓</i> Q&A Quiz
@@ -29,70 +66,7 @@
                     </button>
                 </div>
             </div>
-        </div> -->
-
-
-        <!-- Home Screen -->
-<div id="homeScreen" class="screen">
-    <div class="card">
-        <h2>Quiz Master</h2>
-        <div class="about-section">
-            <h3>About the Application</h3>
-            <p>Quiz Master is an interactive quiz application that supports two types of quizzes:</p>
-            <ul>
-                <li><strong>Q&A Quiz</strong>: Test your knowledge with question and answer format</li>
-                <li><strong>Multiple Choice Quiz</strong>: Challenge yourself with multiple-choice questions</li>
-            </ul>
         </div>
-
-        <div class="file-info">
-            <h3>File Requirements</h3>
-            <div class="file-type-support">
-                <h4>Supported File Types</h4>
-                <p>Upload CSV files with the following specifications:</p>
-                
-                
-                <div class="file-type-details">
-                    <h5>Q&A Quiz CSV Header</h5>
-                    <pre>question,answer</pre>
-                    <p>Example:</p>
-                    <pre>
-What is the capital of France?,Paris
-Who painted the Mona Lisa?,Leonardo da Vinci</pre>
-                </div>
-                <a href="https://github.com/mechtester/randomquestions/raw/main/qa-sample.csv" download class="download-btn">
-                    Download Sample Q&A 
-                </a>
-                
-                <div class="file-type-details">
-                    <h5>Multiple Choice Quiz CSV Header</h5>
-                    <pre>question,option1,option2,option3,option4,correct</pre>
-                    <p>Example:</p>
-                    <pre>
-Which planet is known as the Red Planet?,Earth,Mars,Venus,Jupiter,Mars</pre>
-                </div>
-            </div>
-        </div>
-        <a href="https://github.com/mechtester/randomquestions/raw/main/mcq-sample.csv" download class="download-btn">
-            Download Sample Multiple Choice Questions
-        </a>
-
-        <div class="button-group">
-            <button onclick="showSection('qaSection')" class="btn btn-primary">
-                <i class="icon">❓</i> Q&A Quiz
-            </button>
-            <button onclick="showSection('mcqSection')" class="btn btn-primary">
-                <i class="icon">📝</i> Multiple Choice Quiz
-            </button>
-            <button onclick="clearIndexedDB()" class="btn btn-danger">
-                <i class="icon">🔄</i> Reset All
-            </button>
-        </div>
-    </div>
-</div>
-
-
-
 
         <!-- Q&A Section -->
         <div id="qaSection" class="screen hidden">
@@ -104,7 +78,7 @@ Which planet is known as the Red Planet?,Earth,Mars,Venus,Jupiter,Mars</pre>
                         <span>Remaining: <span id="qaRemainingQuestions">0</span></span>
                     </div>
                 </div>
-                <input type="file" id="qaFile" accept=".csv" onchange="handleQAFile(event)" class="file-input">
+                <input type="file" id="qaFile" accept=".xlsx,.xls" onchange="handleQAFile(event)" class="file-input">
                 <div id="qaQuestions" class="hidden">
                     <div class="question-card">
                         <p id="qaQuestion" class="question"></p>
@@ -132,15 +106,15 @@ Which planet is known as the Red Planet?,Earth,Mars,Venus,Jupiter,Mars</pre>
                         <span>Remaining: <span id="mcqRemainingQuestions">0</span></span>
                     </div>
                 </div>
-                <input type="file" id="mcqFile" accept=".csv" onchange="handleMCQFile(event)" class="file-input">
+                <input type="file" id="mcqFile" accept=".xlsx,.xls" onchange="handleMCQFile(event)" class="file-input">
                 <div id="mcqQuestions" class="hidden">
                     <div class="question-card">
                         <p id="mcqQuestion" class="question"></p>
                         <div id="mcqOptions" class="options-grid"></div>
                         <p id="mcqFeedback" class="hidden"></p>
                         <div class="navigation-buttons">
-                            <button onclick="previousMCQQuestion()" class="hidden btn btn-outline" id="prevMcqBtn">Previous</button>
-                            <button onclick="nextMCQQuestion()" class="hidden btn btn-outline" id="nextMcqBtn">Next</button>
+                            <button onclick="previousMCQQuestion()" class="btn btn-outline" id="prevMcqBtn">Previous</button>
+                            <button onclick="nextMCQQuestion()" class="btn btn-outline" id="nextMcqBtn">Next</button>
                         </div>
                     </div>
                     <div class="score-summary">
@@ -154,10 +128,5 @@ Which planet is known as the Red Planet?,Earth,Mars,Venus,Jupiter,Mars</pre>
     </div>
 
     <script src="script.js"></script>
-
-    
-
-
-
 </body>
 </html>

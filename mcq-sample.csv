@@ -1,4 +1,4 @@
-Question,Option_1,Option_2,Option_3,Option_4,Correct_Answer
+question,option1,option2,option3,option4,correct
 What does CPU stand for?,Central Processing Unit,Central Process Unit,Computer Personal Unit,Central Processor Unit,Central Processing Unit
 Which company developed the Java programming language?,Microsoft,Sun Microsystems,Google,Apple,Sun Microsystems
 What is the main function of an operating system?,Run software applications,Manage computer hardware,Provide internet access,Control peripherals only,Manage computer hardware
@@ -9,7 +9,7 @@ What does RAM stand for?,Read Access Memory,Random Access Memory,Run Access Memo
 Which of the following is not a programming language?,HTML,Python,Java,JavaScript,HTML
 What is the primary function of a firewall?,Block malware,Monitor network traffic,Control network access,Encrypt data,Control network access
 What does SQL stand for?,Structured Query Language,Simple Query Language,System Query Language,Sequential Query Language,Structured Query Language
-What type of malware locks a user’s files and demands payment?,Virus,Trojan,Ransomware,Spyware,Ransomware
+What type of malware locks a userâ€™s files and demands payment?,Virus,Trojan,Ransomware,Spyware,Ransomware
 Which of these is an example of an IP address?,255.255.255.255,www.google.com,192.168.1.1,Both 1 & 3,Both 1 & 3
 What is the function of DNS?,Encrypts web traffic,Converts domain names to IP addresses,Manages firewall rules,Provides VPN services,Converts domain names to IP addresses
 "What does ""phishing"" refer to in cybersecurity?",Sending fake emails to steal information,Hacking into databases,Infecting systems with malware,Cracking passwords,Sending fake emails to steal information

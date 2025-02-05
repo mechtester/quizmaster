@@ -97,3 +97,5 @@ Download sample templates directly from the application:
 - Requires JavaScript to be enabled
 
 For any issues or feature requests, please update in github issues 
+
+Credits ::: Claude AI model , Chat GPT

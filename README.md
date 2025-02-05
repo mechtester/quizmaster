@@ -98,4 +98,5 @@ Download sample templates directly from the application:
 
 For any issues or feature requests, please update in github issues 
 
-Credits ::: Claude AI model , Chat GPT
+Credits ::: Claude AI model , Chat GPT , 
+Special thanks to js.org subdomain sponsor   https://js.org/

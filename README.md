@@ -1,6 +1,6 @@
 # Quiz Master
 
-An interactive web application for creating and taking customizable quizzes. Try it out at [https://randomquestions.js.org/](https://randomquestions.js.org/)
+An interactive web application for creating and taking customizable quizzes. Try it out at [https://quizmaster.js.org/](https://quizmaster.js.org/)
 
 ## Features
 

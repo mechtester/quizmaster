@@ -271,12 +271,16 @@ function retrieveMCQQuestions() {
     };
 }
 
+// Modified showQAQuestion function
 function showQAQuestion() {
     const question = qaQuestions[currentQAIndex];
     document.getElementById('qaQuestion').textContent = question.question;
     document.getElementById('qaAnswer').classList.add('hidden');
     document.getElementById('qaAnswer').textContent = '';
-    document.getElementById('qaRemainingQuestions').textContent = qaQuestions.length - currentQAIndex;
+    
+    // Update remaining questions count - subtract current index from total length
+    const remainingQuestions = qaQuestions.length - currentQAIndex - 1;
+    document.getElementById('qaRemainingQuestions').textContent = Math.max(remainingQuestions, 0);
 }
 
 function showQAAnswer() {
@@ -287,6 +291,7 @@ function showQAAnswer() {
 
 // ... (keep all the previous code up to showMCQQuestion) ...
 
+// Modified showMCQQuestion function
 function showMCQQuestion() {
     const question = mcqQuestions[currentMCQIndex];
     document.getElementById('mcqQuestion').textContent = question.question;
@@ -299,17 +304,25 @@ function showMCQQuestion() {
     `).join('');
     
     document.getElementById('mcqOptions').innerHTML = optionsHtml;
-    document.getElementById('mcqFeedback').classList.add('hidden');
+    
+    // Reset feedback and ensure it's hidden
+    const feedback = document.getElementById('mcqFeedback');
+    feedback.textContent = '';
+    feedback.className = 'hidden';
+    feedback.classList.add('hidden');
     
     // Update navigation buttons
     document.getElementById('prevMcqBtn').classList.toggle('hidden', currentMCQIndex === 0);
     document.getElementById('nextMcqBtn').classList.toggle('hidden', currentMCQIndex >= mcqQuestions.length - 1);
     
-    // Update remaining questions
-    document.getElementById('mcqRemainingQuestions').textContent = mcqQuestions.length - currentMCQIndex;
+    // Update remaining questions count - subtract current index from total length
+    const remainingQuestions = mcqQuestions.length - currentMCQIndex - 1;
+    document.getElementById('mcqRemainingQuestions').textContent = Math.max(remainingQuestions, 0);
     
-    // Add click handlers to radio buttons
+    // Add click handlers to radio buttons and ensure they're enabled
     document.querySelectorAll('input[name="mcq"]').forEach(radio => {
+        radio.disabled = false;
+        radio.checked = false;
         radio.onclick = checkMCQAnswer;
     });
 }
@@ -339,6 +352,7 @@ function checkMCQAnswer(e) {
     });
 }
 
+// Modified nextQAQuestion function
 function nextQAQuestion() {
     if (currentQAIndex < qaQuestions.length - 1) {
         currentQAIndex++;
@@ -351,6 +365,8 @@ function nextQAQuestion() {
                 <button onclick="restartQAQuiz()" class="btn btn-primary">Start Over</button>
             </div>
         `;
+        // Set remaining questions to 0 when quiz is complete
+        document.getElementById('qaRemainingQuestions').textContent = '0';
     }
 }
 
@@ -376,6 +392,8 @@ function nextMCQQuestion() {
                 <button onclick="restartMCQQuiz()" class="btn btn-primary">Start Over</button>
             </div>
         `;
+        // Set remaining questions to 0 when quiz is complete
+        document.getElementById('mcqRemainingQuestions').textContent = '0';
     }
 }
 
@@ -386,12 +404,11 @@ function previousMCQQuestion() {
     }
 }
 
-// Modified restartQAQuiz function
+// Modified restartQAQuiz function to properly reset the count
 function restartQAQuiz() {
     currentQAIndex = 0;
     qaScore = 0;
     qaQuestions = shuffleArray(qaQuestions);
-
 
     // Reset the UI elements
     const questionsDiv = document.getElementById('qaQuestions');
@@ -409,15 +426,16 @@ function restartQAQuiz() {
         </div>
     `;
 
-    // Update counters and show first question
+    // Update total questions count
     document.getElementById('qaTotalQuestions').textContent = qaQuestions.length;
-    document.getElementById('qaRemainingQuestions').textContent = qaQuestions.length;
+    // Set initial remaining questions count (total - 1 for current question)
+    document.getElementById('qaRemainingQuestions').textContent = qaQuestions.length - 1;
     questionsDiv.classList.remove('hidden');
     showQAQuestion();
 }
 
 
-// Modified restartMCQQuiz function
+// Modified restartMCQQuiz function to properly reset the count
 function restartMCQQuiz() {
     currentMCQIndex = 0;
     mcqCorrect = 0;
@@ -442,9 +460,10 @@ function restartMCQQuiz() {
         </div>
     `;
     
-    // Update counters and show first question
+    // Update total questions count
     document.getElementById('mcqTotalQuestions').textContent = mcqQuestions.length;
-    document.getElementById('mcqRemainingQuestions').textContent = mcqQuestions.length;
+    // Set initial remaining questions count (total - 1 for current question)
+    document.getElementById('mcqRemainingQuestions').textContent = mcqQuestions.length - 1;
     questionsDiv.classList.remove('hidden');
     
     // Reset score display

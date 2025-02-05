@@ -46,7 +46,7 @@ An interactive web application for creating and taking customizable quizzes. Try
 
 ### Taking a Quiz
 
-1. Visit [https://randomquestions.js.org/](https://randomquestions.js.org/)
+1. Visit [https://quizmaster.js.org/](https://quizmaster.js.org/)
 2. Choose your quiz type (Q&A or MCQ)
 3. Upload your Excel file
 4. Start answering questions!

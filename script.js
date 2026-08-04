@@ -61,7 +61,11 @@ function populateVoiceList() {
     const voiceSelect = document.getElementById('voiceSelect');
     availableVoices = window.speechSynthesis
         .getVoices()
-        .filter(v => v.lang && v.lang.toLowerCase().startsWith('en'));
+        // English only, and localService === true means it's an on-device
+        // voice. Online/network voice models (localService === false) are
+        // excluded here since they depend on a remote server connection and
+        // are unreliable — they can silently fail to speak or lag badly.
+        .filter(v => v.lang && v.lang.toLowerCase().startsWith('en') && v.localService === true);
 
     if (!voiceSelect) return;
 
@@ -71,7 +75,7 @@ function populateVoiceList() {
     if (availableVoices.length === 0) {
         const option = document.createElement('option');
         option.value = '';
-        option.textContent = 'No English voices found';
+        option.textContent = 'No local English voices found on this device';
         voiceSelect.appendChild(option);
         return;
     }
@@ -374,17 +378,17 @@ function handleQAFile(event) {
     if (!file) return;
 
     const reader = new FileReader();
-
+    
     reader.onload = function(e) {
         try {
             const data = new Uint8Array(e.target.result);
             const workbook = XLSX.read(data, { type: 'array' });
-
+            
             // Get first sheet
             const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
             // Convert to JSON
             const jsonData = XLSX.utils.sheet_to_json(firstSheet);
-
+            
             if (jsonData.length === 0) {
                 alert("No data found in the Excel file!");
                 return;
@@ -399,12 +403,12 @@ function handleQAFile(event) {
                 alert("No valid questions found. Please check the file format!");
                 return;
             }
-
+            
             // Store in IndexedDB
             const transaction = db.transaction(['qaQuestions'], 'readwrite');
             const store = transaction.objectStore('qaQuestions');
             questions.forEach(q => store.add(q));
-
+            
             transaction.oncomplete = function() {
                 retrieveQAQuestions();
             };
@@ -413,7 +417,7 @@ function handleQAFile(event) {
             alert("Error processing the Excel file. Please check the format.");
         }
     };
-
+    
     reader.readAsArrayBuffer(file);
 }
 
@@ -423,17 +427,17 @@ function handleMCQFile(event) {
     if (!file) return;
 
     const reader = new FileReader();
-
+    
     reader.onload = function(e) {
         try {
             const data = new Uint8Array(e.target.result);
             const workbook = XLSX.read(data, { type: 'array' });
-
+            
             // Get first sheet
             const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
             // Convert to JSON
             const jsonData = XLSX.utils.sheet_to_json(firstSheet);
-
+            
             if (jsonData.length === 0) {
                 alert("No data found in the Excel file!");
                 return;
@@ -443,7 +447,7 @@ function handleMCQFile(event) {
             const questions = [];
             for (let row of jsonData) {
                 // Check if all required fields exist and are not empty
-                if (!row.question || !row.option1 || !row.option2 || !row.option3 ||
+                if (!row.question || !row.option1 || !row.option2 || !row.option3 || 
                     !row.option4 || !row.correct) {
                     continue;
                 }
@@ -469,12 +473,12 @@ function handleMCQFile(event) {
                 alert("No valid questions found. Please ensure your Excel file has the following columns:\nquestion, option1, option2, option3, option4, correct");
                 return;
             }
-
+            
             // Store in IndexedDB
             const transaction = db.transaction(['mcqQuestions'], 'readwrite');
             const store = transaction.objectStore('mcqQuestions');
             questions.forEach(q => store.add(q));
-
+            
             transaction.oncomplete = function() {
                 retrieveMCQQuestions();
             };
@@ -483,7 +487,7 @@ function handleMCQFile(event) {
             alert("Error processing the Excel file. Please ensure your file follows the required format:\n- First row should contain headers\n- Required columns: question, option1, option2, option3, option4, correct");
         }
     };
-
+    
     reader.readAsArrayBuffer(file);
 }
 
@@ -513,7 +517,7 @@ function retrieveQAQuestions() {
     const transaction = db.transaction(['qaQuestions'], 'readonly');
     const store = transaction.objectStore('qaQuestions');
     const request = store.getAll();
-
+    
     request.onsuccess = function(event) {
         qaQuestions = shuffleArray(event.target.result);
         if (qaQuestions.length > 0) {
@@ -529,7 +533,7 @@ function retrieveMCQQuestions() {
     const transaction = db.transaction(['mcqQuestions'], 'readonly');
     const store = transaction.objectStore('mcqQuestions');
     const request = store.getAll();
-
+    
     request.onsuccess = function(event) {
         mcqQuestions = shuffleArray(event.target.result);
         if (mcqQuestions.length > 0) {
@@ -547,7 +551,7 @@ function showQAQuestion() {
     document.getElementById('qaQuestion').textContent = question.question;
     document.getElementById('qaAnswer').classList.add('hidden');
     document.getElementById('qaAnswer').textContent = '';
-
+    
     // Update remaining questions count - subtract current index from total length
     const remainingQuestions = qaQuestions.length - currentQAIndex - 1;
     document.getElementById('qaRemainingQuestions').textContent = Math.max(remainingQuestions, 0);
@@ -570,30 +574,30 @@ function showQAAnswer() {
 function showMCQQuestion() {
     const question = mcqQuestions[currentMCQIndex];
     document.getElementById('mcqQuestion').textContent = question.question;
-
+    
     const optionsHtml = question.options.map((option, index) => `
         <div>
             <input type="radio" name="mcq" value="${option}" id="opt${index}">
             <label for="opt${index}">${option}</label>
         </div>
     `).join('');
-
+    
     document.getElementById('mcqOptions').innerHTML = optionsHtml;
-
+    
     // Reset feedback and ensure it's hidden
     const feedback = document.getElementById('mcqFeedback');
     feedback.textContent = '';
     feedback.className = 'hidden';
     feedback.classList.add('hidden');
-
+    
     // Update navigation buttons
     document.getElementById('prevMcqBtn').classList.toggle('hidden', currentMCQIndex === 0);
     document.getElementById('nextMcqBtn').classList.toggle('hidden', currentMCQIndex >= mcqQuestions.length - 1);
-
+    
     // Update remaining questions count - subtract current index from total length
     const remainingQuestions = mcqQuestions.length - currentMCQIndex - 1;
     document.getElementById('mcqRemainingQuestions').textContent = Math.max(remainingQuestions, 0);
-
+    
     // Add click handlers to radio buttons and ensure they're enabled
     document.querySelectorAll('input[name="mcq"]').forEach(radio => {
         radio.disabled = false;
@@ -606,7 +610,7 @@ function checkMCQAnswer(e) {
     const selectedAnswer = e.target.value;
     const correctAnswer = mcqQuestions[currentMCQIndex].correct;
     const feedback = document.getElementById('mcqFeedback');
-
+    
     if (selectedAnswer === correctAnswer) {
         feedback.textContent = "Correct!";
         feedback.className = "correct";
@@ -616,11 +620,11 @@ function checkMCQAnswer(e) {
         feedback.className = "incorrect";
         mcqWrong++;
     }
-
+    
     feedback.classList.remove('hidden');
     document.getElementById('mcqCorrect').textContent = mcqCorrect;
     document.getElementById('mcqWrong').textContent = mcqWrong;
-
+    
     // Disable all radio buttons after answer is selected
     document.querySelectorAll('input[name="mcq"]').forEach(radio => {
         radio.disabled = true;
@@ -720,7 +724,7 @@ function restartMCQQuiz() {
     mcqCorrect = 0;
     mcqWrong = 0;
     mcqQuestions = shuffleArray(mcqQuestions);
-
+    
     // Reset the UI elements
     const questionsDiv = document.getElementById('mcqQuestions');
     questionsDiv.innerHTML = `
@@ -738,17 +742,17 @@ function restartMCQQuiz() {
             <span>Wrong: <span id="mcqWrong" class="incorrect">0</span></span>
         </div>
     `;
-
+    
     // Update total questions count
     document.getElementById('mcqTotalQuestions').textContent = mcqQuestions.length;
     // Set initial remaining questions count (total - 1 for current question)
     document.getElementById('mcqRemainingQuestions').textContent = mcqQuestions.length - 1;
     questionsDiv.classList.remove('hidden');
-
+    
     // Reset score display
     document.getElementById('mcqCorrect').textContent = '0';
     document.getElementById('mcqWrong').textContent = '0';
-
+    
     showMCQQuestion();
 }
 
@@ -765,10 +769,10 @@ function clearIndexedDB() {
     const transaction = db.transaction(['qaQuestions', 'mcqQuestions'], 'readwrite');
     const qaStore = transaction.objectStore('qaQuestions');
     const mcqStore = transaction.objectStore('mcqQuestions');
-
+    
     qaStore.clear();
     mcqStore.clear();
-
+    
     transaction.oncomplete = function() {
         if (speechSupported) {
             window.speechSynthesis.cancel();
@@ -782,7 +786,7 @@ function clearIndexedDB() {
         qaScore = 0;
         mcqCorrect = 0;
         mcqWrong = 0;
-
+        
         // Reset UI elements
         document.getElementById('qaTotalQuestions').textContent = '0';
         document.getElementById('qaRemainingQuestions').textContent = '0';
@@ -790,7 +794,7 @@ function clearIndexedDB() {
         document.getElementById('mcqRemainingQuestions').textContent = '0';
         document.getElementById('mcqCorrect').textContent = '0';
         document.getElementById('mcqWrong').textContent = '0';
-
+        
         // Reset question containers to their initial state
         document.getElementById('qaQuestions').innerHTML = `
             <div class="question-card">
@@ -806,7 +810,7 @@ function clearIndexedDB() {
                 </div>
             </div>
         `;
-
+        
         document.getElementById('mcqQuestions').innerHTML = `
             <div class="question-card">
                 <p id="mcqQuestion" class="question"></p>
@@ -822,15 +826,15 @@ function clearIndexedDB() {
                 <span>Wrong: <span id="mcqWrong" class="incorrect">0</span></span>
             </div>
         `;
-
+        
         // Hide question sections
         document.getElementById('qaQuestions').classList.add('hidden');
         document.getElementById('mcqQuestions').classList.add('hidden');
-
+        
         // Clear file inputs
         document.getElementById('qaFile').value = '';
         document.getElementById('mcqFile').value = '';
-
+        
         // Return to home screen
         showSection('homeScreen');
     };

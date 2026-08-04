@@ -215,6 +215,10 @@ header h1 {
 
 .answer-section {
     margin: 25px 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
 }
 
 .answer {
@@ -224,6 +228,7 @@ header h1 {
     margin-top: 15px;
     font-weight: 500;
     border: 1px solid var(--border-color);
+    width: 100%;
 }
 
 .score-summary {
@@ -297,24 +302,273 @@ header h1 {
     border: 1px solid var(--border-color);
 }
 
+/* ---------- Voice / Text-to-Speech panel ---------- */
+
+.voice-panel {
+    background-color: var(--input-background);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.voice-toggle-row {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+.voice-toggle-label {
+    font-weight: 500;
+    color: var(--text-color);
+}
+
+/* Toggle switch */
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 50px;
+    height: 26px;
+    flex-shrink: 0;
+}
+
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider-toggle {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: var(--border-color);
+    transition: 0.3s;
+    border-radius: 26px;
+}
+
+.slider-toggle::before {
+    position: absolute;
+    content: "";
+    height: 20px;
+    width: 20px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: 0.3s;
+    border-radius: 50%;
+}
+
+.switch input:checked + .slider-toggle {
+    background-color: var(--primary-color);
+}
+
+.switch input:checked + .slider-toggle::before {
+    transform: translateX(24px);
+}
+
+.switch input:focus-visible + .slider-toggle {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+}
+
+/* Collapse / Reset action buttons next to the voice toggle */
+.voice-panel-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-left: auto;
+}
+
+.voice-panel-actions.hidden {
+    display: none;
+}
+
+.icon-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    background-color: var(--card-background);
+    color: var(--text-color);
+    cursor: pointer;
+    font-size: 0.85em;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.icon-btn:hover {
+    background-color: var(--hover-color);
+    border-color: var(--primary-color);
+}
+
+#collapseArrow {
+    display: inline-block;
+    transition: transform 0.2s ease;
+    color: var(--primary-color);
+}
+
+/* Voice controls grid (voice select + rate/pitch/volume sliders) */
+.voice-controls {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border-color);
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 18px;
+    align-items: end;
+}
+
+.voice-controls.hidden {
+    display: none;
+}
+
+.voice-control-item {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.voice-control-item label {
+    font-size: 0.9em;
+    color: #94a3b8;
+    font-weight: 500;
+}
+
+.voice-select {
+    padding: 10px;
+    border-radius: 8px;
+    background-color: var(--card-background);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+    font-family: inherit;
+}
+
+.voice-control-item input[type="range"] {
+    width: 100%;
+    accent-color: var(--primary-color);
+    cursor: pointer;
+}
+
+.voice-test-btn {
+    align-self: end;
+    padding: 10px 18px;
+}
+
+/* ---------- Full screen quiz mode ---------- */
+
+.qa-fullscreen-target {
+    display: flex;
+    flex-direction: column;
+}
+
+.fullscreen-btn {
+    align-self: flex-end;
+    margin-bottom: 15px;
+    padding: 8px 14px;
+    font-size: 0.85em;
+}
+
+/* Applied to <body> while document.documentElement is the native fullscreen
+   element (real full monitor screen, browser chrome hidden). CSS then hides
+   every other section/control so only the question card is visible and it
+   is stretched to fill the entire screen — no half-black-page gap. */
+body.qa-fullscreen-mode header,
+body.qa-fullscreen-mode #homeScreen,
+body.qa-fullscreen-mode #mcqSection,
+body.qa-fullscreen-mode #qaSection .quiz-header,
+body.qa-fullscreen-mode #qaSection .voice-panel,
+body.qa-fullscreen-mode #qaSection .file-input,
+body.qa-fullscreen-mode #qaBackHomeBtn {
+    display: none !important;
+}
+
+body.qa-fullscreen-mode #qaSection,
+body.qa-fullscreen-mode #qaSection .card {
+    padding: 0;
+    margin: 0;
+    border: none;
+    border-radius: 0;
+    background-color: var(--background-color);
+}
+
+body.qa-fullscreen-mode .qa-fullscreen-target {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    margin: 0;
+    background-color: var(--background-color);
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    box-sizing: border-box;
+    z-index: 9999;
+}
+
+body.qa-fullscreen-mode .fullscreen-btn {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    align-self: auto;
+    margin-bottom: 0;
+    z-index: 10000;
+}
+
+body.qa-fullscreen-mode #qaQuestions {
+    width: 100%;
+    max-width: 700px;
+}
+
+body.qa-fullscreen-mode .question-card {
+    border: none;
+    padding: 10px;
+    background: transparent;
+}
+
+body.qa-fullscreen-mode .question {
+    font-size: 2em;
+    text-align: center;
+}
+
+body.qa-fullscreen-mode .answer {
+    font-size: 1.2em;
+    text-align: center;
+}
+
+body.qa-fullscreen-mode .answer-section,
+body.qa-fullscreen-mode .navigation-buttons {
+    justify-content: center;
+}
+
 @media (max-width: 768px) {
     .container {
         padding: 15px;
     }
-    
+
     .card {
         padding: 20px;
     }
-    
+
     .options-grid {
         grid-template-columns: 1fr;
     }
-    
+
     .github-link {
         position: relative;
         top: 0;
         right: 0;
         margin-bottom: 20px;
         justify-content: center;
+    }
+
+    .voice-controls {
+        grid-template-columns: 1fr;
     }
 }

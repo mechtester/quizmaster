@@ -30,7 +30,7 @@
                     <h3>About the Application</h3>
                     <p>Quiz Master is an interactive quiz application that supports two types of quizzes:</p>
                     <ul>
-                        <li><strong>Q&A Quiz</strong>: Test your knowledge with question and answer format</li>
+                        <li><strong>Q&A Quiz</strong>: Test your knowledge with question and answer format (with optional text-to-speech)</li>
                         <li><strong>Multiple Choice Quiz</strong>: Challenge yourself with multiple-choice questions</li>
                     </ul>
                 </div>
@@ -40,7 +40,7 @@
                     <div class="file-type-support">
                         <h4>Supported File Types</h4>
                         <p>Download sample files or upload your Excel files (.xlsx):</p>
-                        
+
                         <div class="file-type-details">
                             <h5>Q&A Quiz Excel Format</h5>
                             <p>First row should contain headers:</p>
@@ -49,7 +49,7 @@
                                 <i class="icon">📥</i> Download Sample Q&A
                             </button>
                         </div>
-                        
+
                         <div class="file-type-details">
                             <h5>Multiple Choice Quiz Excel Format</h5>
                             <p>First row should contain headers:</p>
@@ -85,21 +85,73 @@
                         <span>Remaining: <span id="qaRemainingQuestions">0</span></span>
                     </div>
                 </div>
-                <input type="file" id="qaFile" accept=".xlsx,.xls" onchange="handleQAFile(event)" class="file-input">
-                <div id="qaQuestions" class="hidden">
-                    <div class="question-card">
-                        <p id="qaQuestion" class="question"></p>
-                        <div class="answer-section">
-                            <button onclick="showQAAnswer()" class="btn btn-secondary">Show Answer</button>
-                            <p id="qaAnswer" class="hidden answer"></p>
+
+                <!-- Voice / Text-to-Speech panel -->
+                <div class="voice-panel">
+                    <div class="voice-toggle-row">
+                        <label class="switch">
+                            <input type="checkbox" id="voiceToggle" onchange="toggleVoiceFeature()">
+                            <span class="slider-toggle"></span>
+                        </label>
+                        <span class="voice-toggle-label">🔊 Read questions aloud (Text-to-Speech)</span>
+
+                        <div id="voicePanelActions" class="voice-panel-actions hidden">
+                            <button type="button" id="collapseToggleBtn" class="icon-btn" onclick="toggleVoiceControlsCollapse()" title="Show/Hide voice settings">
+                                <span id="collapseArrow">▲</span> Settings
+                            </button>
+                            <button type="button" class="icon-btn" onclick="resetVoiceSettings()" title="Reset voice settings to default">
+                                ↺ Reset
+                            </button>
                         </div>
-                        <div class="navigation-buttons">
-                            <button onclick="previousQAQuestion()" class="btn btn-outline">Previous</button>
-                            <button onclick="nextQAQuestion()" class="btn btn-outline">Next</button>
+                    </div>
+
+                    <div id="voiceControls" class="voice-controls hidden">
+                        <div class="voice-control-item">
+                            <label for="voiceSelect">Voice (English)</label>
+                            <select id="voiceSelect" class="voice-select" onchange="updateVoiceSetting('voice', this.value)">
+                                <option value="">Loading voices...</option>
+                            </select>
+                        </div>
+                        <div class="voice-control-item">
+                            <label for="rateSlider">Rate: <span id="rateValue">1</span></label>
+                            <input type="range" id="rateSlider" min="0.5" max="2" step="0.1" value="1" oninput="updateVoiceSetting('rate', this.value)">
+                        </div>
+                        <div class="voice-control-item">
+                            <label for="pitchSlider">Pitch: <span id="pitchValue">1</span></label>
+                            <input type="range" id="pitchSlider" min="0" max="2" step="0.1" value="1" oninput="updateVoiceSetting('pitch', this.value)">
+                        </div>
+                        <div class="voice-control-item">
+                            <label for="volumeSlider">Volume: <span id="volumeValue">1</span></label>
+                            <input type="range" id="volumeSlider" min="0" max="1" step="0.1" value="1" oninput="updateVoiceSetting('volume', this.value)">
+                        </div>
+                        <button onclick="testVoice()" class="btn btn-outline voice-test-btn">🔊 Test Voice</button>
+                    </div>
+                </div>
+
+                <input type="file" id="qaFile" accept=".xlsx,.xls" onchange="handleQAFile(event)" class="file-input">
+
+                <!-- In full screen mode we fullscreen the whole page (real monitor full
+                     screen) and add a class to <body> that hides everything except this
+                     wrapper's contents via CSS, so the question/answer stays centered and
+                     always fills the entire screen instead of only part of it. -->
+                <div id="qaFullscreenTarget" class="qa-fullscreen-target">
+                    <button type="button" id="fullscreenBtn" class="btn btn-outline fullscreen-btn" onclick="toggleFullScreen()">⛶ Full Screen</button>
+                    <div id="qaQuestions" class="hidden">
+                        <div class="question-card">
+                            <p id="qaQuestion" class="question"></p>
+                            <div class="answer-section">
+                                <button onclick="repeatQuestion()" class="btn btn-outline">🔊 Repeat Question</button>
+                                <button onclick="showQAAnswer()" class="btn btn-secondary">Show Answer</button>
+                                <p id="qaAnswer" class="hidden answer"></p>
+                            </div>
+                            <div class="navigation-buttons">
+                                <button onclick="previousQAQuestion()" class="btn btn-outline">Previous</button>
+                                <button onclick="nextQAQuestion()" class="btn btn-outline">Next</button>
+                            </div>
                         </div>
                     </div>
                 </div>
-                <button onclick="showSection('homeScreen')" class="btn btn-danger">Back to Home</button>
+                <button id="qaBackHomeBtn" onclick="showSection('homeScreen')" class="btn btn-danger">Back to Home</button>
             </div>
         </div>
 

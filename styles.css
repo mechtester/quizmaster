@@ -78,6 +78,10 @@ header h1 {
     display: none;
 }
 
+.hidden {
+    display: none !important;
+}
+
 .card {
     background-color: var(--card-background);
     border-radius: 16px;
@@ -89,9 +93,24 @@ header h1 {
 
 .button-group {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
+    flex-wrap: wrap;
     gap: 15px;
     margin-top: 20px;
+}
+
+.button-group .btn {
+    flex: 1 1 200px;
+}
+
+@media (max-width: 600px) {
+    .button-group {
+        flex-direction: column;
+    }
+
+    .button-group .btn {
+        flex: 1 1 auto;
+    }
 }
 
 .btn {
@@ -248,48 +267,6 @@ header h1 {
 
 .incorrect {
     color: var(--danger-color);
-}
-
-/* ---------- Best-browser recommendation notice ---------- */
-
-.browser-notice {
-    display: flex;
-    align-items: flex-start;
-    gap: 14px;
-    background-color: rgba(99, 102, 241, 0.12);
-    border: 1px solid var(--primary-color);
-    border-radius: 10px;
-    padding: 16px 20px;
-    margin-bottom: 30px;
-}
-
-.browser-notice-icon {
-    font-size: 1.4em;
-    line-height: 1.2;
-    flex-shrink: 0;
-}
-
-.browser-notice-text {
-    color: var(--text-color);
-    font-size: 0.95em;
-    line-height: 1.6;
-}
-
-.browser-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    background-color: var(--card-background);
-    border: 1px solid var(--border-color);
-    border-radius: 6px;
-    padding: 2px 10px;
-    margin: 0 2px;
-    font-weight: 500;
-    white-space: nowrap;
-}
-
-.browser-badge-icon {
-    font-size: 0.9em;
 }
 
 .about-section {
@@ -456,7 +433,99 @@ header h1 {
     color: var(--primary-color);
 }
 
-/* Voice controls grid (voice select + rate/pitch/volume sliders) */
+/* Piper model status card: load/download state, size, and voice badge */
+.voice-model-status {
+    margin-top: 16px;
+    padding: 14px 16px;
+    border-radius: 10px;
+    background-color: var(--card-background);
+    border: 1px solid var(--border-color);
+}
+
+.voice-model-status.hidden {
+    display: none;
+}
+
+.model-status-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.model-status-icon {
+    font-size: 1.3em;
+    line-height: 1;
+    flex-shrink: 0;
+}
+
+.model-status-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex: 1;
+    min-width: 160px;
+}
+
+.model-status-label {
+    font-weight: 600;
+    color: var(--text-color);
+    font-size: 0.95em;
+}
+
+.model-status-sub {
+    font-size: 0.82em;
+    color: #94a3b8;
+}
+
+.voice-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    background-color: var(--input-background);
+    border: 1px solid var(--border-color);
+    font-size: 0.85em;
+    font-weight: 500;
+    color: var(--text-color);
+    white-space: nowrap;
+}
+
+.voice-badge.hidden {
+    display: none;
+}
+
+.voice-badge-dot {
+    color: #94a3b8;
+}
+
+.voice-badge-grade {
+    color: var(--primary-color);
+    font-weight: 700;
+}
+
+.model-progress-track {
+    margin-top: 12px;
+    height: 6px;
+    border-radius: 999px;
+    background-color: var(--input-background);
+    overflow: hidden;
+}
+
+.model-progress-track.hidden {
+    display: none;
+}
+
+.model-progress-bar {
+    height: 100%;
+    width: 0%;
+    background-color: var(--primary-color);
+    border-radius: 999px;
+    transition: width 0.2s ease;
+}
+
+/* Voice controls grid (voice select + rate/volume sliders) */
 .voice-controls {
     margin-top: 20px;
     padding-top: 20px;
@@ -501,6 +570,10 @@ header h1 {
 .voice-test-btn {
     align-self: end;
     padding: 10px 18px;
+}
+
+.voice-test-btn.hidden {
+    display: none;
 }
 
 /* ---------- Full screen quiz mode ---------- */

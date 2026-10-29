@@ -7,18 +7,24 @@ let mcqCorrect = 0;
 let mcqWrong = 0;
 let db;
 
-// ---------- Text-to-Speech (Web Speech API) state ----------
+// ---------- Text-to-Speech (Piper TTS, on-device neural voices via WASM) ----------
 let voiceEnabled = false;
 let voiceControlsCollapsed = false; // true = sliders/dropdown hidden via the ▲/▼ button
-let availableVoices = [];   // English voices only
 let voiceSettings = {
-    voiceURI: null,
+    voiceId: 'en_US-amy-medium',
     rate: 1,
-    pitch: 1,
     volume: 1
 };
-const DEFAULT_VOICE_SETTINGS = { rate: 1, pitch: 1, volume: 1 };
-const speechSupported = 'speechSynthesis' in window;
+const DEFAULT_VOICE_SETTINGS = { voiceId: 'en_US-amy-medium', rate: 1, volume: 1 };
+
+// Piper needs WebAssembly plus the Origin Private File System (to cache
+// downloaded ~20-115MB voice models between sessions).
+const speechSupported = typeof WebAssembly !== 'undefined' &&
+    !!(navigator.storage && navigator.storage.getDirectory);
+
+let piperReady = false;      // true once piper-tts.js (an ES module) has loaded
+let currentAudio = null;     // the Audio element currently playing synthesized speech
+let pendingSpeakText = null; // queued text if speakText() was called before Piper finished loading
 
 // Initialize IndexedDB
 const request = indexedDB.open('quizDB', 1);
@@ -51,63 +57,158 @@ function loadExistingQuestions() {
    Text-to-Speech (TTS) helpers
    ========================================================= */
 
-// Populate the voice dropdown with English-language voices only.
-// getVoices() can return an empty list until the async
-// 'voiceschanged' event fires in some browsers, so this is called
-// both immediately and whenever that event fires.
-function populateVoiceList() {
-    if (!speechSupported) return;
-
-    const voiceSelect = document.getElementById('voiceSelect');
-    availableVoices = window.speechSynthesis
-        .getVoices()
-        // English only, and localService === true means it's an on-device
-        // voice. Online/network voice models (localService === false) are
-        // excluded here since they depend on a remote server connection and
-        // are unreliable — they can silently fail to speak or lag badly.
-        .filter(v => v.lang && v.lang.toLowerCase().startsWith('en') && v.localService === true);
-
-    if (!voiceSelect) return;
-
-    const previousSelection = voiceSettings.voiceURI;
-    voiceSelect.innerHTML = '';
-
-    if (availableVoices.length === 0) {
-        const option = document.createElement('option');
-        option.value = '';
-        option.textContent = 'No local English voices found on this device';
-        voiceSelect.appendChild(option);
-        return;
+// piper-tts.js is a deferred ES module (needed for its CDN imports), so it
+// may still be loading when this classic script runs. Both orderings are
+// handled: if `window.piperTTS` already exists we're ready immediately,
+// otherwise we wait for the 'piper-tts-ready' event it dispatches.
+function onPiperReady() {
+    piperReady = true;
+    populateVoiceList();
+    if (voiceEnabled) {
+        refreshModelStatus();
     }
-
-    availableVoices.forEach(voice => {
-        const option = document.createElement('option');
-        option.value = voice.voiceURI;
-        option.textContent = `${voice.name} (${voice.lang})${voice.default ? ' — default' : ''}`;
-        voiceSelect.appendChild(option);
-    });
-
-    // Keep the previously selected voice if it still exists, otherwise
-    // fall back to the first available English voice.
-    const stillExists = previousSelection &&
-        availableVoices.some(v => v.voiceURI === previousSelection);
-
-    voiceSettings.voiceURI = stillExists ? previousSelection : availableVoices[0].voiceURI;
-    voiceSelect.value = voiceSettings.voiceURI;
+    if (pendingSpeakText) {
+        const text = pendingSpeakText;
+        pendingSpeakText = null;
+        speakText(text);
+    }
 }
 
 if (speechSupported) {
-    populateVoiceList();
-    // Chrome (and others) load voices asynchronously
-    window.speechSynthesis.onvoiceschanged = populateVoiceList;
+    if (window.piperTTS) {
+        onPiperReady();
+    } else {
+        window.addEventListener('piper-tts-ready', onPiperReady, { once: true });
+    }
 } else {
-    console.warn('Speech synthesis is not supported in this browser.');
+    console.warn('Piper TTS is not supported in this browser (needs WebAssembly + Origin Private File System).');
+}
+
+// Populate the voice dropdown from Piper's English voice catalog.
+function populateVoiceList() {
+    const voiceSelect = document.getElementById('voiceSelect');
+    if (!voiceSelect || !window.piperTTS) return;
+
+    voiceSelect.innerHTML = '';
+
+    window.piperTTS.VOICE_CATALOG.forEach(voice => {
+        const option = document.createElement('option');
+        option.value = voice.id;
+        const grade = window.piperTTS.QUALITY_GRADE[voice.quality];
+        const qualityLabel = window.piperTTS.QUALITY_LABEL[voice.quality];
+        option.textContent = `${voice.flag} ${voice.name} (${qualityLabel} · ${grade})`;
+        voiceSelect.appendChild(option);
+    });
+
+    voiceSelect.value = voiceSettings.voiceId;
+    updateVoiceBadge(voiceSettings.voiceId);
+}
+
+// Updates the "🇺🇸 Amy · Medium · B+" badge in the model status card to
+// match the currently selected voice.
+function updateVoiceBadge(voiceId) {
+    if (!window.piperTTS) return;
+    const meta = window.piperTTS.getVoiceMeta(voiceId);
+    const badge = document.getElementById('voiceBadge');
+    if (!meta || !badge) return;
+
+    document.getElementById('voiceBadgeFlag').textContent = meta.flag;
+    document.getElementById('voiceBadgeName').textContent = meta.name;
+    document.getElementById('voiceBadgeQuality').textContent = window.piperTTS.QUALITY_LABEL[meta.quality];
+    document.getElementById('voiceBadgeGrade').textContent = window.piperTTS.QUALITY_GRADE[meta.quality];
+    badge.classList.remove('hidden');
+
+    const sizeMb = window.piperTTS.QUALITY_SIZE_MB[meta.quality];
+    const sizeLabel = document.getElementById('modelSizeLabel');
+    if (sizeLabel) sizeLabel.textContent = `~${sizeMb} MB`;
+}
+
+function setModelStatus(label, icon) {
+    const statusLabel = document.getElementById('modelStatusLabel');
+    const statusIcon = document.getElementById('modelStatusIcon');
+    if (statusLabel) statusLabel.textContent = label;
+    if (statusIcon) statusIcon.textContent = icon;
+}
+
+// Pass `null` to hide the progress bar.
+function setModelProgress(percent) {
+    const track = document.getElementById('modelProgressTrack');
+    const bar = document.getElementById('modelProgressBar');
+    if (!track || !bar) return;
+
+    if (percent === null) {
+        track.classList.add('hidden');
+        return;
+    }
+    track.classList.remove('hidden');
+    bar.style.width = `${Math.min(100, Math.max(0, percent))}%`;
+}
+
+// Checks (without downloading) whether the selected voice's model is
+// already cached in OPFS from a previous session, and updates the status
+// card + "Download Voice" button accordingly.
+async function refreshModelStatus() {
+    const statusCard = document.getElementById('voiceModelStatus');
+    const downloadBtn = document.getElementById('downloadVoiceBtn');
+    if (!statusCard || !window.piperTTS) return;
+
+    statusCard.classList.remove('hidden');
+    updateVoiceBadge(voiceSettings.voiceId);
+    setModelStatus('Checking model…', '⏳');
+
+    const downloaded = await window.piperTTS.isDownloaded(voiceSettings.voiceId);
+
+    if (downloaded) {
+        setModelStatus('Model ready (WASM)', '✅');
+        setModelProgress(null);
+        if (downloadBtn) downloadBtn.classList.add('hidden');
+    } else {
+        setModelStatus('Model not downloaded yet', '⬇️');
+        setModelProgress(null);
+        if (downloadBtn) downloadBtn.classList.remove('hidden');
+    }
+}
+
+// Downloads the given voice's model into OPFS if it isn't cached yet,
+// driving the progress bar in the status card. Returns true once the model
+// is ready to use.
+async function ensureVoiceDownloaded(voiceId) {
+    if (!window.piperTTS) return false;
+
+    if (await window.piperTTS.isDownloaded(voiceId)) {
+        return true;
+    }
+
+    setModelStatus('Downloading model…', '⬇️');
+    setModelProgress(0);
+    try {
+        await window.piperTTS.downloadVoice(voiceId, (progress) => {
+            if (progress.total) {
+                setModelProgress(Math.round((progress.loaded / progress.total) * 100));
+            }
+        });
+        setModelStatus('Model ready (WASM)', '✅');
+        setModelProgress(null);
+        document.getElementById('downloadVoiceBtn')?.classList.add('hidden');
+        return true;
+    } catch (err) {
+        console.error('Piper: failed to download voice model', err);
+        setModelStatus('Download failed — tap to retry', '⚠️');
+        setModelProgress(null);
+        return false;
+    }
+}
+
+// "Download Voice" button — lets the user pre-fetch the model instead of
+// waiting for the first "Test Voice" click or question read.
+async function downloadSelectedVoice() {
+    await ensureVoiceDownloaded(voiceSettings.voiceId);
 }
 
 // Turn the voice feature on/off from the toggle switch
 function toggleVoiceFeature() {
     if (!speechSupported) {
-        alert('Sorry, your browser does not support text-to-speech.');
+        alert('Sorry, your browser does not support Piper TTS (it needs WebAssembly and the Origin Private File System).');
         document.getElementById('voiceToggle').checked = false;
         return;
     }
@@ -119,18 +220,20 @@ function toggleVoiceFeature() {
     updateVoiceControlsVisibility();
 
     if (voiceEnabled) {
-        populateVoiceList();
+        if (piperReady) {
+            refreshModelStatus();
+        }
         // Read the currently displayed question right away
         const questionText = document.getElementById('qaQuestion')?.textContent;
         if (questionText) {
             speakText(questionText);
         }
     } else {
-        window.speechSynthesis.cancel();
+        stopSpeaking();
     }
 }
 
-// Shows/hides the rate/pitch/volume/voice controls based on both the
+// Shows/hides the rate/volume/voice controls based on both the
 // master toggle (voiceEnabled) and the collapse arrow (voiceControlsCollapsed)
 function updateVoiceControlsVisibility() {
     const controls = document.getElementById('voiceControls');
@@ -145,40 +248,35 @@ function updateVoiceControlsVisibility() {
     }
 }
 
-// Up/down arrow button — collapses or expands the rate/pitch/volume/voice
+// Up/down arrow button — collapses or expands the rate/volume/voice
 // settings without turning the read-aloud feature itself off
 function toggleVoiceControlsCollapse() {
     voiceControlsCollapsed = !voiceControlsCollapsed;
     updateVoiceControlsVisibility();
 }
 
-// Reset button — restores rate/pitch/volume to defaults and the voice
-// dropdown to the first available English voice
+// Reset button — restores rate/volume to defaults and the voice dropdown
+// to the default Piper voice
 function resetVoiceSettings() {
     voiceSettings.rate = DEFAULT_VOICE_SETTINGS.rate;
-    voiceSettings.pitch = DEFAULT_VOICE_SETTINGS.pitch;
     voiceSettings.volume = DEFAULT_VOICE_SETTINGS.volume;
-    voiceSettings.voiceURI = availableVoices.length > 0 ? availableVoices[0].voiceURI : null;
+    voiceSettings.voiceId = DEFAULT_VOICE_SETTINGS.voiceId;
 
     const rateSlider = document.getElementById('rateSlider');
-    const pitchSlider = document.getElementById('pitchSlider');
     const volumeSlider = document.getElementById('volumeSlider');
     const voiceSelect = document.getElementById('voiceSelect');
 
     if (rateSlider) rateSlider.value = DEFAULT_VOICE_SETTINGS.rate;
-    if (pitchSlider) pitchSlider.value = DEFAULT_VOICE_SETTINGS.pitch;
     if (volumeSlider) volumeSlider.value = DEFAULT_VOICE_SETTINGS.volume;
 
     const rateValue = document.getElementById('rateValue');
-    const pitchValue = document.getElementById('pitchValue');
     const volumeValue = document.getElementById('volumeValue');
     if (rateValue) rateValue.textContent = DEFAULT_VOICE_SETTINGS.rate;
-    if (pitchValue) pitchValue.textContent = DEFAULT_VOICE_SETTINGS.pitch;
     if (volumeValue) volumeValue.textContent = DEFAULT_VOICE_SETTINGS.volume;
 
-    if (voiceSelect && voiceSettings.voiceURI) {
-        voiceSelect.value = voiceSettings.voiceURI;
-    }
+    if (voiceSelect) voiceSelect.value = voiceSettings.voiceId;
+
+    if (piperReady) refreshModelStatus();
 }
 
 /* ---------- Full screen quiz mode ---------- */
@@ -232,54 +330,81 @@ document.addEventListener('fullscreenchange', syncFullscreenState);
 document.addEventListener('webkitfullscreenchange', syncFullscreenState);
 document.addEventListener('MSFullscreenChange', syncFullscreenState);
 
-// Update rate / pitch / volume / voice from the sliders & dropdown
+// Update rate / volume / voice from the sliders & dropdown. Rate is applied
+// via HTMLAudioElement.playbackRate (Piper's model inference itself doesn't
+// expose a per-call speed/pitch knob through this library), so it also
+// nudges pitch slightly — a standard, expected trade-off for playback-rate
+// based speed control.
 function updateVoiceSetting(type, value) {
     switch (type) {
         case 'rate':
             voiceSettings.rate = parseFloat(value);
             document.getElementById('rateValue').textContent = value;
-            break;
-        case 'pitch':
-            voiceSettings.pitch = parseFloat(value);
-            document.getElementById('pitchValue').textContent = value;
+            if (currentAudio) currentAudio.playbackRate = voiceSettings.rate;
             break;
         case 'volume':
             voiceSettings.volume = parseFloat(value);
             document.getElementById('volumeValue').textContent = value;
+            if (currentAudio) currentAudio.volume = voiceSettings.volume;
             break;
         case 'voice':
-            voiceSettings.voiceURI = value;
+            voiceSettings.voiceId = value;
+            if (piperReady) refreshModelStatus();
             break;
     }
 }
 
-// Speak arbitrary text using the currently selected voice/rate/pitch/volume
-function speakText(text) {
-    if (!speechSupported || !text) return;
+// Stops any Piper audio currently playing.
+function stopSpeaking() {
+    if (currentAudio) {
+        currentAudio.pause();
+        currentAudio.src = '';
+        currentAudio = null;
+    }
+}
 
-    // Stop anything currently being read before starting the next utterance
-    window.speechSynthesis.cancel();
+// Speak arbitrary text using the currently selected Piper voice. Downloads
+// the voice's model into OPFS first if it isn't cached yet (progress is
+// shown in the model status card), then runs on-device WASM inference and
+// plays back the resulting WAV.
+async function speakText(text) {
+    if (!speechSupported || !text || !voiceEnabled) return;
 
-    const utterance = new SpeechSynthesisUtterance(text);
-    const selectedVoice = availableVoices.find(v => v.voiceURI === voiceSettings.voiceURI);
+    stopSpeaking();
 
-    if (selectedVoice) {
-        utterance.voice = selectedVoice;
-        utterance.lang = selectedVoice.lang;
-    } else {
-        utterance.lang = 'en-US';
+    if (!piperReady || !window.piperTTS) {
+        // piper-tts.js (an ES module) hasn't finished loading yet — queue
+        // this request and onPiperReady() will replay it.
+        pendingSpeakText = text;
+        return;
     }
 
-    utterance.rate = voiceSettings.rate;
-    utterance.pitch = voiceSettings.pitch;
-    utterance.volume = voiceSettings.volume;
+    const voiceId = voiceSettings.voiceId;
+    const ready = await ensureVoiceDownloaded(voiceId);
+    if (!ready) return;
 
-    window.speechSynthesis.speak(utterance);
+    setModelStatus('Synthesizing speech…', '🎙️');
+    try {
+        const wav = await window.piperTTS.synthesize(text, voiceId);
+        const audio = new Audio(URL.createObjectURL(wav));
+        audio.playbackRate = voiceSettings.rate;
+        audio.volume = voiceSettings.volume;
+        audio.onended = () => {
+            currentAudio = null;
+            setModelStatus('Model ready (WASM)', '✅');
+        };
+        currentAudio = audio;
+        setModelStatus('🔊 Speaking…', '🔊');
+        await audio.play();
+    } catch (err) {
+        console.error('Piper: speech synthesis failed', err);
+        setModelStatus('Speech synthesis failed', '⚠️');
+    }
 }
 
 // "Test Voice" button — lets the user preview settings without a question loaded
 function testVoice() {
-    speakText('This is a test of the selected voice, rate, pitch and volume settings.');
+    speakText('This is a test of the selected Piper voice, rate and volume settings.');
 }
 
 // "Repeat Question" button — re-reads the currently displayed question on demand,
@@ -288,6 +413,14 @@ function repeatQuestion() {
     const questionText = document.getElementById('qaQuestion')?.textContent;
     if (questionText) {
         speakText(questionText);
+    }
+}
+
+// "Read Answer" button — reads the currently revealed answer aloud on demand
+function readAnswer() {
+    const answerText = document.getElementById('qaAnswer')?.textContent;
+    if (answerText) {
+        speakText(answerText);
     }
 }
 
@@ -493,9 +626,7 @@ function handleMCQFile(event) {
 
 function showSection(sectionId) {
     // Stop any ongoing speech when navigating between sections
-    if (speechSupported) {
-        window.speechSynthesis.cancel();
-    }
+    stopSpeaking();
 
     // Safety net: exit full screen mode if the user somehow navigates away
     // while still in it (the Back to Home button is hidden during full
@@ -551,6 +682,7 @@ function showQAQuestion() {
     document.getElementById('qaQuestion').textContent = question.question;
     document.getElementById('qaAnswer').classList.add('hidden');
     document.getElementById('qaAnswer').textContent = '';
+    document.getElementById('readAnswerBtn')?.classList.add('hidden');
     
     // Update remaining questions count - subtract current index from total length
     const remainingQuestions = qaQuestions.length - currentQAIndex - 1;
@@ -566,6 +698,7 @@ function showQAAnswer() {
     const answer = qaQuestions[currentQAIndex].answer;
     document.getElementById('qaAnswer').textContent = answer;
     document.getElementById('qaAnswer').classList.remove('hidden');
+    document.getElementById('readAnswerBtn')?.classList.remove('hidden');
 }
 
 // ... (keep all the previous code up to showMCQQuestion) ...
@@ -637,9 +770,7 @@ function nextQAQuestion() {
         currentQAIndex++;
         showQAQuestion();
     } else {
-        if (speechSupported) {
-            window.speechSynthesis.cancel();
-        }
+        stopSpeaking();
         document.getElementById('qaQuestions').innerHTML = `
             <div class="question-card">
                 <h3>Quiz Complete!</h3>
@@ -700,6 +831,7 @@ function restartQAQuiz() {
             <div class="answer-section">
                 <button onclick="repeatQuestion()" class="btn btn-outline">🔊 Repeat Question</button>
                 <button onclick="showQAAnswer()" class="btn btn-secondary">Show Answer</button>
+                <button id="readAnswerBtn" onclick="readAnswer()" class="btn btn-outline hidden" title="Read answer aloud">🔊 Read Answer</button>
                 <p id="qaAnswer" class="hidden answer"></p>
             </div>
             <div class="navigation-buttons">
@@ -774,9 +906,7 @@ function clearIndexedDB() {
     mcqStore.clear();
     
     transaction.oncomplete = function() {
-        if (speechSupported) {
-            window.speechSynthesis.cancel();
-        }
+        stopSpeaking();
 
         // Clear all data arrays
         qaQuestions = [];
@@ -802,6 +932,7 @@ function clearIndexedDB() {
                 <div class="answer-section">
                     <button onclick="repeatQuestion()" class="btn btn-outline">🔊 Repeat Question</button>
                     <button onclick="showQAAnswer()" class="btn btn-secondary">Show Answer</button>
+                    <button id="readAnswerBtn" onclick="readAnswer()" class="btn btn-outline hidden" title="Read answer aloud">🔊 Read Answer</button>
                     <p id="qaAnswer" class="hidden answer"></p>
                 </div>
                 <div class="navigation-buttons">
